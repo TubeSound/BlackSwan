@@ -1118,7 +1118,7 @@ def detect_terms(vector, value):
         terms.append([begin, n - 1])
     return terms
 
-def PPP(timeframe, data: dict, long_term, mid_term, short_term, threshold=0.01, tap=0):
+def PPP(timeframe, data: dict, long_term, mid_term, short_term, pre, post, target, threshold=0.01, tap=0):
     op = data[Columns.OPEN]
     hi = data[Columns.HIGH]
     lo = data[Columns.LOW]
@@ -1148,114 +1148,46 @@ def PPP(timeframe, data: dict, long_term, mid_term, short_term, threshold=0.01, 
                 
     data[Indicators.MA_GOLDEN_CROSS] = golden_cross
     
+    up_terms = detect_terms(golden_cross, 1)
+    down_terms = detect_terms(golden_cross, -1)
     
-       
-    sig0 = full(n, 0)
-    for i in range(n):
-        d = golden_cross[i - tap: i + 1]
-        if abs(sum(d)) == tap + 1:
-            if d[0] == 1 and slope_long[i] >= threshold and slope_mid[i] >= threshold and slope_short[i] >= threshold:
-                sig0[i] = 1
-            elif d[0] == -1 and slope_long[i] <= -threshold and slope_mid[i] <= threshold and slope_short[i] <= threshold:
-                sig0[i] = -1
-            
-    sig = full(n, 0)
-    current = 0
-    i_current = None
-    for i in range(n):
-        if current != sig0[i]:
-            if i_current is not None:
-                if sig0[i] != 0 : #and (i - i_current + 1) == tap:
-                    sig[i] = sig0[i]
-            current = sig0[i]
-            i_current = i
-    entry =sig
-    data[Indicators.PPP_ENTRY] = entry
-    
-
-    ext = full(n, 0)
-    for i in range(n):
-        if entry[i] != 0:
-            if entry[i] == Signal.LONG:
-                s = Signal.SHORT
+    result = []
+    entry = full(n, 0)
+    for j, terms in enumerate([up_terms, down_terms]):
+        indices = []
+        entries = []
+        vectors = []
+        prices = []
+        for i0, i1 in terms:
+            begin = i0 - pre
+            end = i0 + target
+            if i1 < end:
+                continue
+            if begin < 0 or end >= n:
+                continue
+            sl = slice(begin, i0 + post + 1)
+            l = ma_long[sl]
+            m = ma_mid[sl]
+            s = ma_short[sl]
+            if is_nans(l + m + s):
+                continue
+            normal = ma_mid[i0]
+            l = (np.array(l) - normal) / normal * 100
+            m = (np.array(m) - normal) / normal * 100
+            s = (np.array(s) - normal) / normal * 100
+            vectors.append([s, m, l])
+            p = (cl[i0 + target] - cl[i0 + post]) /cl[i0 + post] * 100
+            prices.append(p)
+            indices.append(i0)
+            entries.append(i0 + post)
+            if j == 0:
+                entry[i0 + post] = Signal.LONG
             else:
-                s = Signal.LONG
-            j1 = seek(golden_cross, i + 1, 0)
-            j2 = seek(entry, i + 1, s)
-            j = min([j1, j2])
-            if j < n:
-                ext[j] = 1
-    data[Indicators.PPP_EXIT] = ext  
-    
-def PPP2(timeframe, data: dict, long_term, mid_term, short_term, threshold=20, tap=2):
-    op = data[Columns.OPEN]
-    hi = data[Columns.HIGH]
-    lo = data[Columns.LOW]
-    cl = data[Columns.CLOSE]
-    n = len(op)
-    ma_long = sma(cl, long_term)
-    ma_mid = sma(cl, mid_term)
-    ma_short = sma(cl, short_term)
-    data[Indicators.MA_LONG] = ma_long
-    data[Indicators.MA_MID] = ma_mid
-    data[Indicators.MA_SHORT] = ma_short    
-    
-    slope = slope_by_hour(timeframe, ma_mid, tap=tap)
-    data[Indicators.MA_MID_SLOPE] = slope
-    
-    ATRP(data, 40, ma_window=40)
-    
-    golden_cross = full(n, 0)
-    for i in range(n):
-        if ma_short[i] > ma_mid[i] and ma_mid[i] > ma_long[i]:
-            golden_cross[i] = 1
-        elif ma_short[i] < ma_mid[i] and ma_mid[i] < ma_long[i]:
-            golden_cross[i]
-    
-    
-    sig0 = full(n, 0)
-    for i in range(n):
-        d1 = ma_short[i] - ma_mid[i]
-        d2 = ma_mid[i] - ma_long[i]
-        if d1 > threshold and d2 > threshold:
-            sig0[i] = 1
-        elif d1 < -threshold and d2 < -threshold:
-            sig0[i] = -1
-            
-    sig = full(n, 0)
-    current = 0
-    i_current = None
-    for i in range(n):
-        if current != sig0[i]:
-            if i_current is not None:
-                if sig0[i] != 0 : #and (i - i_current + 1) == tap:
-                    sig[i] = sig0[i]
-            current = sig0[i]
-            i_current = i
-    entry =sig
+                entry[i0 + post] = Signal.SHORT
+        result.append([indices, entries, vectors, prices])
     data[Indicators.PPP_ENTRY] = entry
+    return result
     
-
-    ext = full(n, 0)
-    for i in range(n):
-        if entry[i] != 0:
-            if entry[i] == Signal.LONG:
-                s = Signal.SHORT
-            else:
-                s = Signal.LONG
-            j1 = seek(golden_cross, i + 1, 0)
-            j2 = seek(entry, i + 1, s)
-            j = min([j1, j2])
-            if j < n:
-                ext[j] = 1
-    data[Indicators.PPP_EXIT] = ext     
-    
-
-            
-         
-                
-            
-            
     
 def seek(vector, begin, value):
     n = len(vector)
