@@ -100,8 +100,8 @@ class MakeFeatures:
  
  
 
-def plot(symbol, timeframe, values, pre, post, target):
-     data, indices, vectors, prices = values
+def plot(symbol, timeframe, data, values, pre, post, target):
+     indices, entries, vectors, prices = values
      cl = data[Columns.CLOSE]
      time = data[Columns.JST]
      ma_short = data[Indicators.MA_SHORT]
@@ -146,8 +146,12 @@ def main():
     pre = 12 * 8
     post = 12 * 1
     target = 12 * 4
-    values = making.make(param, pre, post, target)
-    plot(symbol, timeframe, values, pre, post, target)
+    
+    p = param['MA']
+    data = from_pickle(symbol, timeframe)
+    up, down = PPP(timeframe, data, p['short_term'], p['mid_term'], p['long_term'], pre, post, target)
+    [indices, entries, vectors, prices] = up
+    plot(symbol, timeframe, data, up, pre, post, target)
     
 def test():
     a = [1, 2, 3, 4, 5]
