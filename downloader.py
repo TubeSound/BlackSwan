@@ -31,8 +31,8 @@ def download(symbols, save_holder):
     api.connect()
     for symbol in symbols:
         for tf in [TimeFrame.M5, TimeFrame.M15, TimeFrame.M30, TimeFrame.H1, TimeFrame.H4, TimeFrame.D1]: #TimeFrame.M1, 
-            for year in range(2020, 2025):
-                for month in range(1, 13):
+            for year in range(2024, 2025):
+                for month in range(10, 11):
                     t0 = datetime(year, month, 1, 7)
                     t0 = t0.replace(tzinfo=JST)
                     t1 = t0 + relativedelta(months=1) - timedelta(seconds=1)

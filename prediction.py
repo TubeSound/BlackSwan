@@ -128,7 +128,7 @@ def plot(symbol, timeframe, is_long,  data, values, pre, post, target):
         axes[0].scatter(time[index + post], cl[index + post], marker='o', s=200, color='red', alpha=0.5)
         axes[0].scatter(time[index + target], cl[index + target], marker='o', s=300, color='red', alpha=0.5)
         ax = axes[0].twinx()
-        ax.scatter(time[sl], cross[sl], s=10, alpha=0.7, color='orange')
+        ax.plot(time[sl], cross[sl],alpha=0.5, color='orange')
         if is_long:
             ax.set_ylim(0, 5)
         else:
