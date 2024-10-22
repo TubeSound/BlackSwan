@@ -100,14 +100,16 @@ class MakeFeatures:
  
  
 
-def plot(symbol, timeframe, data, values, pre, post, target):
+def plot(symbol, timeframe, is_long,  data, values, pre, post, target):
      indices, entries, vectors, prices = values
      cl = data[Columns.CLOSE]
      time = data[Columns.JST]
      ma_short = data[Indicators.MA_SHORT]
      ma_mid = data[Indicators.MA_MID]
      ma_long = data[Indicators.MA_LONG]
-     dirpath = f'./debug/PPP/{symbol}/{timeframe}'
+     cross =data[Indicators.MA_GOLDEN_CROSS]
+     label = "long" if is_long else "short"
+     dirpath = f'./debug/PPP/{symbol}/{timeframe}/{label}'
      os.makedirs(dirpath, exist_ok=True)
      page = 0
      for index, vector, price in zip(indices, vectors, prices):
@@ -122,8 +124,15 @@ def plot(symbol, timeframe, data, values, pre, post, target):
         axes[0].scatter(time[sl], ma_short[sl], s=5, alpha=0.2, color='red')
         axes[0].scatter(time[sl], ma_mid[sl], s=5, alpha=0.2, color='green')
         axes[0].scatter(time[sl], ma_long[sl], s=5, alpha=0.2, color='blue')
-        axes[0].scatter(time[index], cl[index], marker='o', color='green', s=100, alpha=0.5)
-        axes[0].scatter(time[index + target], cl[index + target], marker='x', s=100, color='red', alpha=0.5)
+        axes[0].scatter(time[index], cl[index], marker='o', color='orange', s=100, alpha=0.5)
+        axes[0].scatter(time[index + post], cl[index + post], marker='o', s=200, color='red', alpha=0.5)
+        axes[0].scatter(time[index + target], cl[index + target], marker='o', s=300, color='red', alpha=0.5)
+        ax = axes[0].twinx()
+        ax.scatter(time[sl], cross[sl], s=10, alpha=0.7, color='orange')
+        if is_long:
+            ax.set_ylim(0, 5)
+        else:
+            ax.set_ylim(-5, 0)
         
         begin = index - pre
         sl = slice(begin, index + post + 1)
@@ -131,6 +140,11 @@ def plot(symbol, timeframe, data, values, pre, post, target):
         axes[1].scatter(time[sl], m, s=5, alpha=0.5, color='green')
         axes[1].scatter(time[sl], l, s=5, alpha=0.5, color='blue')
         axes[1].hlines(0, time[xlim[0]], time[xlim[1]], color='gray')
+        axes[1].scatter(time[index], m[pre], marker='o', color='orange', s=100, alpha=0.5)
+        axes[1].scatter(time[index + post], m[pre + post], marker='o', s=200, color='red', alpha=0.5)
+        #axes[1].scatter(time[index + target], m[pre + target], marker='o', s=300, color='red', alpha=0.5)
+        
+        
         [ax.set_xlim(time[xlim[0]], time[xlim[1]]) for ax in axes]
         
         fig.savefig(os.path.join(dirpath, f'ma_graph_#{page}.png'))
@@ -151,7 +165,7 @@ def main():
     data = from_pickle(symbol, timeframe)
     up, down = PPP(timeframe, data, p['short_term'], p['mid_term'], p['long_term'], pre, post, target)
     [indices, entries, vectors, prices] = up
-    plot(symbol, timeframe, data, up, pre, post, target)
+    plot(symbol, timeframe, True, data, up, pre, post, target)
     
 def test():
     a = [1, 2, 3, 4, 5]

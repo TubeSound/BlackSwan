@@ -831,11 +831,11 @@ def VWAP(data: dict, begin_hour_list, pivot_threshold, pivot_left_len, pivot_cen
     data[Indicators.VWAP_PROB] = up
     data[Indicators.VWAP_DOWN] = down
     
-    signal2 = slice(up, 90, 10, 10)
+    signal2 = slice_vector(up, 90, 10, 10)
     data[Indicators.VWAP_PROB_SIGNAL] = signal2
     
     
-def slice(vector, threshold_upper: float, threshold_lower: float, length: int):
+def slice_vector(vector, threshold_upper: float, threshold_lower: float, length: int):
     n = len(vector)
     states = nans(n)
     begin = None
@@ -864,7 +864,7 @@ def RCI(data: dict, window: int, pivot_threshold: float, pivot_length: int):
     cl = data[Columns.CLOSE]
     rc = rci(cl, window)
     data[Indicators.RCI] = rc
-    signal = slice(rc, pivot_threshold, -pivot_threshold, pivot_length)
+    signal = slice_vector(rc, pivot_threshold, -pivot_threshold, pivot_length)
     data[Indicators.RCI_SIGNAL] = signal
     
        
@@ -1161,11 +1161,16 @@ def PPP(timeframe, data: dict, long_term, mid_term, short_term, pre, post, targe
         for i0, i1 in terms:
             begin = i0 - pre
             end = i0 + target
-            if i1 < end:
-                continue
+            #cross = golden_cross[i0: i0 + post + 1]
+            #if j == 0:
+            #    if sum(cross) < post * 0.3:
+            #        continue
+            #else:
+            #    if sum(cross) > post * 0.3:
+            #        continue
             if begin < 0 or end >= n:
                 continue
-            sl = slice(begin, i0 + post + 1)
+            sl = slice(begin, i0 + post + 1, 1)
             l = ma_long[sl]
             m = ma_mid[sl]
             s = ma_short[sl]
