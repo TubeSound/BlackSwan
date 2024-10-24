@@ -109,7 +109,10 @@ class Bot:
         short_term = ppp['short_term']
         tap = ppp['tap']
         threshold = ppp['threshold']
-        PPP(timeframe, data, long_term, mid_term, short_term, threshold=threshold, tap=tap)
+        pre = 12 * 4
+        post = 12 * 1
+        target = 12 * 4
+        PPP(timeframe, data, long_term, mid_term, short_term, pre, post, target, threshold=threshold, tap=tap)
         
         
     def set_sever_time(self, begin_month, begin_sunday, end_month, end_sunday, delta_hour_from_gmt_in_summer):

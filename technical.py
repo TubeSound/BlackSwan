@@ -1160,28 +1160,35 @@ def PPP(timeframe, data: dict, long_term, mid_term, short_term, pre, post, targe
         prices = []
         for i0, i1 in terms:
             begin = i0 - pre
-            end = i0 + target
-            #cross = golden_cross[i0: i0 + post + 1]
-            #if j == 0:
-            #    if sum(cross) < post * 0.3:
-            #        continue
-            #else:
-            #    if sum(cross) > post * 0.3:
-            #        continue
-            if begin < 0 or end >= n:
+            end = i0 + post
+            if begin < 0 or end > n - 1:
                 continue
+            
+            x = golden_cross[i0: i0 + post + 1]
+            if abs(sum(x)) < len(x):
+                continue 
+            
             sl = slice(begin, i0 + post + 1, 1)
             l = ma_long[sl]
             m = ma_mid[sl]
             s = ma_short[sl]
             if is_nans(l + m + s):
                 continue
+            if j == 0:
+                if m[post] <= m[0]:
+                    continue
+            elif j == 1:
+                if m[post] >= m[0]:
+                    continue
             normal = ma_mid[i0]
             l = (np.array(l) - normal) / normal * 100
             m = (np.array(m) - normal) / normal * 100
             s = (np.array(s) - normal) / normal * 100
             vectors.append([s, m, l])
-            p = (cl[i0 + target] - cl[i0 + post]) /cl[i0 + post] * 100
+            if i0 + target <= n - 1:
+                p = (cl[i0 + target] - cl[i0 + post]) / cl[i0 + post] * 100
+            else:
+                p = np.nan
             prices.append(p)
             indices.append(i0)
             entries.append(i0 + post)
@@ -1191,6 +1198,7 @@ def PPP(timeframe, data: dict, long_term, mid_term, short_term, pre, post, targe
                 entry[i0 + post] = Signal.SHORT
         result.append([indices, entries, vectors, prices])
     data[Indicators.PPP_ENTRY] = entry
+    data[Indicators.PPP_EXIT] = full(n, 0)
     return result
     
     

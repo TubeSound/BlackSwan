@@ -127,6 +127,15 @@ def plot(symbol, timeframe, is_long,  data, values, pre, post, target):
         axes[0].scatter(time[index], cl[index], marker='o', color='orange', s=100, alpha=0.5)
         axes[0].scatter(time[index + post], cl[index + post], marker='o', s=200, color='red', alpha=0.5)
         axes[0].scatter(time[index + target], cl[index + target], marker='o', s=300, color='red', alpha=0.5)
+        
+        if is_long:
+            minv =  min(cl[sl])
+            axes[0].set_ylim(minv, minv + 500)
+        else:
+            maxv = max(cl[sl])
+            axes[0].set_ylim(maxv - 500, maxv)
+        
+
         ax = axes[0].twinx()
         ax.plot(time[sl], cross[sl],alpha=0.5, color='orange')
         if is_long:
@@ -142,6 +151,7 @@ def plot(symbol, timeframe, is_long,  data, values, pre, post, target):
         axes[1].hlines(0, time[xlim[0]], time[xlim[1]], color='gray')
         axes[1].scatter(time[index], m[pre], marker='o', color='orange', s=100, alpha=0.5)
         axes[1].scatter(time[index + post], m[pre + post], marker='o', s=200, color='red', alpha=0.5)
+        axes[1].set_ylim(-0.5, 0.5)
         #axes[1].scatter(time[index + target], m[pre + target], marker='o', s=300, color='red', alpha=0.5)
         
         
@@ -157,13 +167,13 @@ def main():
     timeframe = 'M5'
     making = MakeFeatures(symbol, timeframe)
     param = {'MA': {'long_term': 60, 'mid_term': 20, 'short_term': 5}}
-    pre = 12 * 8
+    pre = 12 * 4
     post = 12 * 1
     target = 12 * 4
     
     p = param['MA']
     data = from_pickle(symbol, timeframe)
-    up, down = PPP(timeframe, data, p['short_term'], p['mid_term'], p['long_term'], pre, post, target)
+    up, down = PPP(timeframe, data, p['long_term'], p['mid_term'], p['short_term'], pre, post, target)
     [indices, entries, vectors, prices] = up
     plot(symbol, timeframe, True, data, up, pre, post, target)
     

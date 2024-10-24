@@ -161,7 +161,10 @@ class TradeBot:
         short_term = ppp['short_term']
         tap = ppp['tap']
         threshold = ppp['threshold']
-        PPP(self.timeframe, data, long_term, mid_term, short_term, tap=tap, threshold=threshold)
+        pre = 12 * 4
+        post = 12 * 1
+        target = 12 * 4
+        PPP(self.timeframe, data, long_term, mid_term, short_term, pre, post, target, tap=tap, threshold=threshold)
        
         
         
