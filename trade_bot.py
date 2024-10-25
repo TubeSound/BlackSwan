@@ -207,10 +207,10 @@ class TradeBot:
             #self.check_timeup(current_index)
             entry_signal = self.buffer.data[self.entry_column][-1]
             exit_signal = self.buffer.data[self.exit_column][-1]
-            if exit_signal > 0:
+            if exit_signal != 0:
                 positions = self.trade_manager.open_positions()
                 if len(positions) > 0:
-                    self.close_positions(positions)
+                    self.close_positions(positions, exit_signal)
                     self.debug_print('<Exit> position num:', len(positions))
                     record = True
             if entry_signal == Signal.LONG or entry_signal == Signal.SHORT:
@@ -334,15 +334,16 @@ class TradeBot:
                         self.debug_print('<Closed Timeup> Fail', self.symbol, info.desc())                                      
         self.trade_manager.remove_positions(remove_tickets)
        
-    def close_positions(self, positions):   
+    def close_positions(self, positions, siganl):   
         removed_tickets = []
         for ticket, position in positions.items():
-            ret, _ = self.mt5.close_by_position_info(position)
-            if ret:
-                removed_tickets.append(position.ticket)
-                self.debug_print('<Closed Doten> Success', self.symbol, position.desc())
-            else:
-                self.debug_print('<Closed Doten> Fail', self.symbol, position.desc())           
+            if position.siganl() == signal:
+                ret, _ = self.mt5.close_by_position_info(position)
+                if ret:
+                    removed_tickets.append(position.ticket)
+                    self.debug_print('<Closed> Success', self.symbol, position.desc())
+                else:
+                    self.debug_print('<Closed> Fail', self.symbol, position.desc())           
         self.trade_manager.remove_positions(removed_tickets)
         
         
@@ -378,8 +379,8 @@ def trade_param():
                   'sl': {'method': 1, 'value':100},
                   'volume': 0.1,
                   'position_max':5,
-                  'trail_target':400, 
-                  'trail_stop': 100,
+                  'trail_target':100, 
+                  'trail_stop': 50,
                   'timelimit':0}
    return param        
 
