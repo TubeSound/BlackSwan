@@ -350,9 +350,9 @@ class TradeBot:
         
 def technical_param(symbol):
     param_nikkei = {'PPP': {
-                        'long_term': 240,
-                        'mid_term': 144,
-                        'short_term': 55,
+                        'long_term': 60,
+                        'mid_term': 20,
+                        'short_term': 5,
                         'tap': 0,
                         'threshold': 0.01
                     }
@@ -361,9 +361,9 @@ def technical_param(symbol):
         return param_nikkei
     
     param_dow = {'PPP': {
-                        'long_term': 384,
-                        'mid_term': 192,
-                        'short_term': 68,
+                        'long_term': 60,
+                        'mid_term': 20,
+                        'short_term': 5,
                         'tap': 0,
                         'threshold': 0.01
                     }
@@ -378,8 +378,8 @@ def trade_param():
                   'sl': {'method': 1, 'value':100},
                   'volume': 0.1,
                   'position_max':5,
-                  'trail_target':100, 
-                  'trail_stop': 50,
+                  'trail_target':400, 
+                  'trail_stop': 100,
                   'timelimit':0}
    return param        
 

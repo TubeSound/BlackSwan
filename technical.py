@@ -1153,9 +1153,9 @@ def PPP(timeframe, data: dict, long_term, mid_term, short_term, pre, post, targe
     
     result = []
     entry = full(n, 0)
+    ext = full(n, 0)
     for j, terms in enumerate([up_terms, down_terms]):
         indices = []
-        entries = []
         vectors = []
         prices = []
         for i0, i1 in terms:
@@ -1191,14 +1191,19 @@ def PPP(timeframe, data: dict, long_term, mid_term, short_term, pre, post, targe
                 p = np.nan
             prices.append(p)
             indices.append(i0)
-            entries.append(i0 + post)
             if j == 0:
                 entry[i0 + post] = Signal.LONG
             else:
                 entry[i0 + post] = Signal.SHORT
-        result.append([indices, entries, vectors, prices])
+            iexit = i0 + target
+            if iexit <= n - 1:
+                if j == 0:
+                    ext[iexit] = Signal.LONG
+                else:
+                    ext[iexit] = Signal.SHORT
+        result.append([indices, vectors, prices])
     data[Indicators.PPP_ENTRY] = entry
-    data[Indicators.PPP_EXIT] = full(n, 0)
+    data[Indicators.PPP_EXIT] = ext
     return result
     
     

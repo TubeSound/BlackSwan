@@ -198,9 +198,9 @@ class Bot:
 
 def technical_param(symbol):
     param_nikkei = {'PPP': {
-                        'long_term': 240,
-                        'mid_term': 144,
-                        'short_term': 55,
+                        'long_term': 60,
+                        'mid_term': 20,
+                        'short_term': 5,
                         'tap': 0,
                         'threshold': 0.01
                     }
@@ -209,9 +209,9 @@ def technical_param(symbol):
         return param_nikkei
     
     param_dow = {'PPP': {
-                        'long_term': 384,
-                        'mid_term': 192,
-                        'short_term': 68,
+                        'long_term': 60,
+                        'mid_term': 20,
+                        'short_term': 5,
                         'tap': 0,
                         'threshold': 0.01
                     }

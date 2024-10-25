@@ -101,7 +101,7 @@ class MakeFeatures:
  
 
 def plot(symbol, timeframe, is_long,  data, values, pre, post, target):
-     indices, entries, vectors, prices = values
+     indices, vectors, prices = values
      cl = data[Columns.CLOSE]
      time = data[Columns.JST]
      ma_short = data[Indicators.MA_SHORT]
@@ -174,7 +174,7 @@ def main():
     p = param['MA']
     data = from_pickle(symbol, timeframe)
     up, down = PPP(timeframe, data, p['long_term'], p['mid_term'], p['short_term'], pre, post, target)
-    [indices, entries, vectors, prices] = up
+    [indices, vectors, prices] = up
     plot(symbol, timeframe, True, data, up, pre, post, target)
     
 def test():
