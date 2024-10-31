@@ -225,7 +225,7 @@ class Mt5Trade:
             elif signal == Signal.SHORT:
                 request['tp'] = float(price - takeprofit)
         result = mt5api.order_send(request)
-        print('エントリー ', request)
+        #print('エントリー ', request)
         return self.parse_order_result(result, index, time, stoploss, takeprofit)
     
     def get_positions(self):
@@ -389,7 +389,7 @@ class Mt5TradeSim:
         return slilced
 
     def get_rates(self, timeframe: str, utc_begin, utc_end):
-        print(self.symbol, timeframe)
+        #print(self.symbol, timeframe)
         df = self.dic[timeframe]
         return self.search_in_time(df, Columns.TIME, utc_begin, utc_end)
 

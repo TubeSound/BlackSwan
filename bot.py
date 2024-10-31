@@ -152,7 +152,8 @@ class Bot:
             if entry_signal != 0 or exit_signal != 0:
                 path = self.save_chart(f'{self.symbol}_{self.timeframe}', self.buffer.data, 100)
                 if exit_signal > 0:
-                    self.notify.send(f'{self.symbol} 手仕舞ってね ', image=path)
+                    pass
+                    #self.notify.send(f'{self.symbol} 手仕舞ってね ', image=path)
                 elif entry_signal == Signal.LONG:
                     self.notify.send(f'{self.symbol} 買ってよし', image=path)
                 elif entry_signal == Signal.SHORT:

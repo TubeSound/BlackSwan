@@ -376,7 +376,7 @@ def trade_param():
    param = {'begin_hour':8, 
                   'begin_minute':0,
                   'hours': 24,
-                  'sl': {'method': 1, 'value':100},
+                  'sl': {'method': 1, 'value':50},
                   'volume': 0.1,
                   'position_max':5,
                   'trail_target':100, 

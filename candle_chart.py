@@ -202,7 +202,7 @@ class CandleChart:
         self.ax.xaxis_date()
         self.ax.xaxis.set_major_formatter(mdates.DateFormatter(date_format))
         
-    def drawCandle(self, Time, Open, High, Low, Close, bar_width=None, tick_minutes=60, xlabel=False, ymargin=0.1):
+    def drawCandle(self, Time, Open, High, Low, Close, bar_width=None, tick_minutes=60, xlabel=True, ymargin=0.1):
         self.time = Time
         vmin = min(Low)
         vmax = max(High)
