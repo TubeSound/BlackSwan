@@ -184,7 +184,7 @@ class Bot:
         ma_s = data[Indicators.MA_SHORT][n-length:]
         
         fig, ax = plt.subplots(1, 1, figsize=(7, 3))
-        chart = CandleChart(fig, ax, title=title, date_format=CandleChart.DATE_FORMAT_DATE_TIME)
+        chart = CandleChart(fig, ax, title=title, date_format=CandleChart.DATE_FORMAT_TIME)
         chart.drawCandle(jst, op, hi, lo, cl)
         chart.drawLine(jst, ma_l, color='blue')
         chart.drawLine(jst, ma_m, color='green')
