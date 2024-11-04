@@ -225,37 +225,6 @@ class TradeBot:
                     pass
         return n
     
-    def update_doten(self):
-        self.remove_closed_positions()
-        record = self.trailing()
-        df = self.mt5.get_rates(self.timeframe, 2)
-        df = df.iloc[:-1, :]
-        n = self.buffer.update(df)
-        if n > 0:
-            current_time = self.buffer.last_time()
-            current_index = self.buffer.last_index()
-            os.makedirs('./debug', exist_ok=True)
-            #save(self.buffer.data, './debug/update_' + self.symbol + '_' + datetime.now().strftime('%Y-%m-%d_%H_%M_%S') + '.xlsx')
-            #self.check_timeup(current_index)
-            entry_signal = self.buffer.data[self.entry_column][-1]
-            exit_signal = self.buffer.data[self.exit_column][-1]
-            if exit_signal > 0:
-                positions = self.trade_manager.open_positions()
-                if len(positions) > 0:
-                    self.close_positions(positions)
-                    record = True
-            if entry_signal == Signal.LONG or entry_signal == Signal.SHORT:
-                self.debug_print('<Entry Signal:> ', entry_signal)
-                self.entry(self.buffer.data, entry_signal, current_index, current_time)
-            if record:
-                try:
-                    df = self.trade_manager.summary()
-                    os.makedirs('./debug')
-                    df.to_excel('./debug/trade_summary.xlsx', index=False)
-                except:
-                    pass
-        return n
-    
             
                 
     def mt5_position_num(self):
@@ -405,8 +374,8 @@ def test():
     bot2 = create_bot('DOW', 'M5')
     bot2.run()
     while True:
-        scheduler.enter(10, 1, bot1.update_doten)
-        scheduler.enter(10, 2, bot2.update_doten)
+        scheduler.enter(10, 1, bot1.update)
+        scheduler.enter(10, 2, bot2.update)
         scheduler.run()
 
 if __name__ == '__main__':

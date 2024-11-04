@@ -169,7 +169,7 @@ def main():
     param = {'MA': {'long_term': 60, 'mid_term': 20, 'short_term': 5}}
     pre = 12 * 4
     post = 12 * 1
-    target = 12 * 4
+    target = 12 * 16
     
     p = param['MA']
     data = from_pickle(symbol, timeframe)
