@@ -238,7 +238,7 @@ class Simulation:
             return 0
             
         
-    def run(self, data, long_signal, short_signal):
+    def run(self, data, entry_signal, exit_signal):
         self.data = data
         time = data[Columns.JST]
         op =data[Columns.OPEN]
@@ -246,27 +246,21 @@ class Simulation:
         lo = data[Columns.LOW]
         cl = data[Columns.CLOSE]
         n = len(time)
-        long = data[long_signal]
-        short = data[short_signal]
+        entry = data[entry_signal]
+        ext = data[exit_signal]
         for i in range(1, n):
             t = time[i]
             if i == n - 1:
                 self.positions.exit_all(i, time[i], cl[i])
                 break
             self.positions.update(i, time[i], op[i], hi[i], lo[i], cl[i])
-            if long[i] == 1:
-                sl = self.calc_sl(data, i, Signal.LONG, cl[i])
-                self.entry(Signal.LONG, i, time[i], cl[i], sl)
-            elif long[i] == -1:
-                self.positions.exit_all_signal(Signal.LONG, i, time[i], cl[i])
-            if short[i] == 1:
-                sl = self.calc_sl(data, i, Signal.SHORT, cl[i])
-                self.entry(Signal.SHORT, i, time[i], cl[i], sl)
-            elif short[i] == -1:
-                self.positions.exit_all_signal(Signal.SHORT, i, time[i], cl[i])
+            if entry[i] != 0:
+                #sl = self.calc_sl(i, entry[i], cl[i])
+                self.entry(entry, i, time[i], cl[i])
+            if ext[i] != 0:
+                self.positions.exit_all_signal(ext[i], i, time[i], cl[i])
         summary, profit_curve = self.positions.summary()
         return self.positions.to_dataFrame(self.strategy), summary, profit_curve
-        
         
     
     def run_doten(self, entry_column, exit_column):        
