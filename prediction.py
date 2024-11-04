@@ -164,7 +164,7 @@ def plot(symbol, timeframe, is_long,  data, values, pre, post, target):
 def trade(symbol, timeframe, data, technical_param, trade_param):
     p1 = technical_param['MA']
     p2 = technical_param['PPP']
-    up, dowm = PPP(timeframe, data, p1['long_term'], p1['mid_term'], p1['short_term'], p2['pre'], p2['post'], p2['target'])
+    up, down = PPP(timeframe, data, p1['long_term'], p1['mid_term'], p1['short_term'], p2['pre'], p2['post'], p2['target'])
     sim = Simulation(data, trade_param)        
     df, summary, profit_curve = sim.run(data, Indicators.PPP_ENTRY, Indicators.PPP_EXIT)
     trade_num, profit, win_rate = summary
