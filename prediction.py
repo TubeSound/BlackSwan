@@ -161,19 +161,50 @@ def plot(symbol, timeframe, is_long,  data, values, pre, post, target):
         page += 1
         plt.close()
         
- 
-def main():
-    symbol = 'DOW'
-    timeframe = 'M5'
-    making = MakeFeatures(symbol, timeframe)
+def trade(symbol, timeframe, data, technical_param, trade_param):
+    p1 = technical_param['MA']
+    p2 = technical_param['PPP']
+    up, dowm = PPP(timeframe, data, p1['long_term'], p1['mid_term'], p1['short_term'], p2['pre'], p2['post'], p2['target'])
+    sim = Simulation(trade_param)        
+    df, summary, profit_curve = sim.run(data, Indicators.PPP_ENTRY, Indicators.PPP_EXIT)
+    trade_num, profit, win_rate = summary
+    return (up, down), (df, summary, profit_curve)
+
+def make_technical_param():
     param = {'MA': {'long_term': 60, 'mid_term': 20, 'short_term': 5}}
     pre = 12 * 4
     post = 12 * 1
     target = 12 * 16
-    
-    p = param['MA']
+    param['PPP'] = {'pre': pre, 'post': post, 'target': target}
+    return param
+
+        
+def make_trade_param(sl, trailing_target, trailing_stop):
+    param =  {
+                'strategy': 'supertrend',
+                'begin_hour': 0,
+                'begin_minute': 0,
+                'hours': 0,
+                'sl': {
+                        'method': 'fix',
+                        'value': sl
+                    },
+                'target_profit': trailing_target,
+                'trailing_stop': trailing_stop, 
+                'volume': 0.1, 
+                'position_max': 5, 
+                'timelimit': 0}
+    return param
+ 
+def main():
+    symbol = 'DOW'
+    timeframe = 'M5'
+    #making = MakeFeatures(symbol, timeframe)
+
     data = from_pickle(symbol, timeframe)
-    up, down = PPP(timeframe, data, p['long_term'], p['mid_term'], p['short_term'], pre, post, target)
+    technical_param = make_technical_param()
+    trade_param = make_trade_param(100, 100, 100)
+    (up, down), result = trade(symbol, timeframe, data, technical_param, trade_param)
     [indices, vectors, prices] = up
     plot(symbol, timeframe, True, data, up, pre, post, target)
     
