@@ -1137,74 +1137,62 @@ def PPP(timeframe, data: dict, long_term, mid_term, short_term, pre, post, targe
     data[Indicators.MA_MID_SLOPE] = slope_mid
     data[Indicators.MA_SHORT_SLOPE] = slope_short
     ATRP(data, 40, ma_window=40)
-    golden_cross = full(n, 0)
+    cross = full(n, 0)
     for i in range(n):
         if ma_short[i] > ma_mid[i] and ma_mid[i] > ma_long[i]:
             if slope_long[i] > threshold and slope_mid[i] > threshold and slope_short[i] > threshold:
-                golden_cross[i] = 1
+                cross[i] = 1
         elif ma_short[i] < ma_mid[i] and ma_mid[i] < ma_long[i]:
             if slope_long[i] < -threshold and slope_mid[i] < -threshold and slope_short[i] < -threshold:
-                golden_cross[i] = - 1
+                cross[i] = - 1
                 
-    data[Indicators.MA_GOLDEN_CROSS] = golden_cross
     
-    up_terms = detect_terms(golden_cross, 1)
-    down_terms = detect_terms(golden_cross, -1)
+    up, down = majority(cross)
+    entries = full(n, 0)
+    for i in range(1, n):
+        if up[i - 1] == 0 and up[i] == 1:
+            entries[i] = Signal.LONG
+        elif down[i - 1] == 0 and down[i] == 1:
+            entries[i] = Signal.SHORT
     
-    result = []
-    entry = full(n, 0)
-    ext = full(n, 0)
-    for j, terms in enumerate([up_terms, down_terms]):
-        indices = []
-        vectors = []
-        prices = []
-        for i0, i1 in terms:
-            begin = i0 - pre
-            end = i0 + post
-            if begin < 0 or end > n - 1:
-                continue
-            
-            x = golden_cross[i0: i0 + post + 1]
-            if abs(sum(x)) < len(x):
-                continue 
-            
-            sl = slice(begin, i0 + post + 1, 1)
-            l = ma_long[sl]
-            m = ma_mid[sl]
-            s = ma_short[sl]
-            if is_nans(l + m + s):
-                continue
-            if j == 0:
-                if m[post] <= m[0]:
-                    continue
-            elif j == 1:
-                if m[post] >= m[0]:
-                    continue
-            normal = ma_mid[i0]
-            l = (np.array(l) - normal) / normal * 100
-            m = (np.array(m) - normal) / normal * 100
-            s = (np.array(s) - normal) / normal * 100
-            vectors.append([s, m, l])
-            if i0 + target <= n - 1:
-                p = (cl[i0 + target] - cl[i0 + post]) / cl[i0 + post] * 100
-            else:
-                p = np.nan
-            prices.append(p)
-            indices.append(i0)
-            if j == 0:
-                entry[i0 + post] = Signal.LONG
-            else:
-                entry[i0 + post] = Signal.SHORT
-            iexit = i0 + target
-            if iexit <= n - 1:
-                if j == 0:
-                    ext[iexit] = Signal.LONG
-                else:
-                    ext[iexit] = Signal.SHORT
-        result.append([indices, vectors, prices])
-    data[Indicators.PPP_ENTRY] = entry
-    data[Indicators.PPP_EXIT] = ext
-    return result
+    polarity = full(n, 0)    
+    exits = full(n, 0)   
+    current = 0
+    for i in range(n):
+        if current == 0:
+            if cross[i] != 0:
+                current = cross[i]
+        elif current == 1:
+            if cross[i] == -1:
+                current = -1
+                exits[i] = 1
+        elif current == -1:
+            if cross[i] == 1:
+                current = 1
+                exits[i] = 1
+        polarity[i] = current
+          
+    data[Indicators.MA_GOLDEN_CROSS] = cross
+    data[Indicators.PPP_ENTRY] = entries
+    data[Indicators.PPP_EXIT] = exits
+    data[Indicators.PPP_UP] = up
+    data[Indicators.PPP_DOWN] = down
+    
+
+def majority(vector, values=[1, -1], window=10, rate=0.8):
+    n = len(vector)
+    results = []
+    for value in values:
+        data = [1 if v == value else 0 for v in vector]
+        sig = full(n, 0)
+        for i in range(window - 1, n):
+            d = data[i - window + 1: i + 1]
+            if (sum(d) / window) >= rate:
+                sig[i] = 1
+        results.append(sig)
+    return results
+    
+    
     
     
 def seek(vector, begin, value):

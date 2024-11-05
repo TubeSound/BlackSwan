@@ -134,7 +134,6 @@ def plot(symbol, timeframe, is_long,  data, values, pre, post, target):
         else:
             maxv = max(cl[sl])
             axes[0].set_ylim(maxv - 500, maxv)
-        
 
         ax = axes[0].twinx()
         ax.plot(time[sl], cross[sl],alpha=0.5, color='orange')
@@ -142,7 +141,6 @@ def plot(symbol, timeframe, is_long,  data, values, pre, post, target):
             ax.set_ylim(0, 5)
         else:
             ax.set_ylim(-5, 0)
-        
         begin = index - pre
         sl = slice(begin, index + post + 1)
         axes[1].scatter(time[sl], s, s=5, alpha=0.5, color='red')
@@ -153,22 +151,63 @@ def plot(symbol, timeframe, is_long,  data, values, pre, post, target):
         axes[1].scatter(time[index + post], m[pre + post], marker='o', s=200, color='red', alpha=0.5)
         axes[1].set_ylim(-0.5, 0.5)
         #axes[1].scatter(time[index + target], m[pre + target], marker='o', s=300, color='red', alpha=0.5)
-        
-        
         [ax.set_xlim(time[xlim[0]], time[xlim[1]]) for ax in axes]
-        
         fig.savefig(os.path.join(dirpath, f'ma_graph_#{page}.png'))
         page += 1
         plt.close()
         
+        
+def plot2(symbol, timeframe, data0):
+    dirpath = f'./debug/PPP2/{symbol}/{timeframe}'
+    os.makedirs(dirpath, exist_ok=True)
+    jst = data0[Columns.JST]
+    tbegin = jst[0]
+    tend = jst[-1]
+    page = 0
+    t = tbegin
+    t1 = t + timedelta(days=7)
+    while t < tend:
+        n, data = TimeUtils.slice(data0, jst, t, t1)   
+        time = data[Columns.JST]
+        cl = data[Columns.CLOSE] 
+        ma_short = data[Indicators.MA_SHORT]
+        ma_mid = data[Indicators.MA_MID]
+        ma_long = data[Indicators.MA_LONG]
+        cross =data[Indicators.MA_GOLDEN_CROSS]
+
+        entries = data[Indicators.PPP_ENTRY]
+        exits = data[Indicators.PPP_EXIT]
+        up = data[Indicators.PPP_UP]
+        down = data[Indicators.PPP_DOWN]
+    
+        fig, axes = plt.subplots(2, 1, figsize=(20, 8))
+        axes[0].plot(time, cl, color='blue', alph=0.2)
+        axes[0].plot(time, ma_short, alpha=0.2, color='red', linewidth=0.1)
+        axes[0].plot(time, ma_mid, alpha=0.2, color='green', linewidth=0.1)
+        axes[0].plot(time, ma_long, alpha=0.2, color='blue', linewidth=0.1)
+        ax = axes[0].twinx()
+        ax.plot(time, cross, alpha=0.5, color='orange')
+        ax.set_ylim(-2, 2)
+        axes[1].plot(time, down, s=5, alpha=0.5, color='red')
+        axes[1].plot(time, up, s=5, alpha=0.5, color='green')
+        axes[1].set_ylim(-2, 2)
+        #axes[1].scatter(time[index + target], m[pre + target], marker='o', s=300, color='red', alpha=0.5)
+        [ax.set_xlim(time[0], time[-1]) for ax in axes]
+        fig.savefig(os.path.join(dirpath, f'ma_graph_#{page}.png'))
+        page += 1
+        plt.close()        
+        t = t1
+        t1 = t + timedelta(days=7)
+        
+        
 def trade(symbol, timeframe, data, technical_param, trade_param):
     p1 = technical_param['MA']
     p2 = technical_param['PPP']
-    up, down = PPP(timeframe, data, p1['long_term'], p1['mid_term'], p1['short_term'], p2['pre'], p2['post'], p2['target'])
+    PPP(timeframe, data, p1['long_term'], p1['mid_term'], p1['short_term'], p2['pre'], p2['post'], p2['target'])
     sim = Simulation(data, trade_param)        
     df, summary, profit_curve = sim.run(data, Indicators.PPP_ENTRY, Indicators.PPP_EXIT)
     trade_num, profit, win_rate = summary
-    return (up, down), (df, summary, profit_curve)
+    return (df, summary, profit_curve)
 
 def make_technical_param():
     param = {'MA': {'long_term': 60, 'mid_term': 20, 'short_term': 5}}
@@ -197,16 +236,17 @@ def make_trade_param(sl, trailing_target, trailing_stop):
     return param
  
 def main():
-    symbol = 'DOW'
+    symbol = 'NIKKEI'
     timeframe = 'M5'
     #making = MakeFeatures(symbol, timeframe)
 
     data = from_pickle(symbol, timeframe)
     technical_param = make_technical_param()
     trade_param = make_trade_param(100, 100, 100)
-    (up, down), result = trade(symbol, timeframe, data, technical_param, trade_param)
-    [indices, vectors, prices] = up
-    plot(symbol, timeframe, True, data, up, pre, post, target)
+    result = trade(symbol, timeframe, data, technical_param, trade_param)
+    #[indices, vectors, prices] = up
+    #plot(symbol, timeframe, True, data, up, pre, post, target)
+    plot2(symbol, timeframe, data)
     
 def test():
     a = [1, 2, 3, 4, 5]

@@ -127,6 +127,8 @@ class Indicators:
     
     PPP_ENTRY = 'PPP_ENTRY'
     PPP_EXIT = 'PPP_EXIT'
+    PPP_UP = 'PPP_UP'
+    PPP_DOWN = 'PPP_DOWN'
     
     MA_GOLDEN_CROSS = 'MA_GOLDEN_CROSS'
 

@@ -306,7 +306,7 @@ class TradeBot:
     def close_positions(self, positions, siganl):   
         removed_tickets = []
         for ticket, position in positions.items():
-            if position.siganl() == signal:
+            if position.signal() == signal:
                 ret, _ = self.mt5.close_by_position_info(position)
                 if ret:
                     removed_tickets.append(position.ticket)
