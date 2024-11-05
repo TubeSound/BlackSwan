@@ -181,7 +181,7 @@ def plot2(symbol, timeframe, data0):
         down = data[Indicators.PPP_DOWN]
     
         fig, axes = plt.subplots(2, 1, figsize=(20, 8))
-        axes[0].plot(time, cl, color='blue', alph=0.2)
+        axes[0].plot(time, cl, color='blue', alpha=0.2)
         axes[0].plot(time, ma_short, alpha=0.2, color='red', linewidth=0.1)
         axes[0].plot(time, ma_mid, alpha=0.2, color='green', linewidth=0.1)
         axes[0].plot(time, ma_long, alpha=0.2, color='blue', linewidth=0.1)
