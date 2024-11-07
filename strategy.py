@@ -270,7 +270,7 @@ class Simulation:
             self.positions.update(i, time[i], op[i], hi[i], lo[i], cl[i])
             if entry[i] != 0:
                 #sl = self.calc_sl(i, entry[i], cl[i])
-                self.entry(entry, i, time[i], cl[i])
+                self.entry(entry[i], i, time[i], cl[i])
 
             if ext[i] != 0:
                 self.positions.exit_all_signal(ext[i], i, time[i], cl[i])

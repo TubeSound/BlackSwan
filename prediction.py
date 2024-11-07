@@ -240,7 +240,12 @@ def main():
     dirpath = f'./debug/PPP2/{symbol}/{timeframe}'
     os.makedirs(dirpath, exist_ok=True)
 
-    data = from_pickle(symbol, timeframe)
+    data0 = from_pickle(symbol, timeframe)
+    jst = data0[Columns.JST]
+    t1 = jst[-1]
+    t0 = t1 - timedelta(days=14)
+    n, data = TimeUtils.slice(data0, jst, t0, t1)   
+    
     technical_param = make_technical_param()
     trade_param = make_trade_param(100, 100, 100)
     result = trade(symbol, timeframe, data, technical_param, trade_param)
