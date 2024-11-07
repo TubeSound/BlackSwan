@@ -157,9 +157,7 @@ def plot(symbol, timeframe, is_long,  data, values, pre, post, target):
         plt.close()
         
         
-def plot2(symbol, timeframe, data0):
-    dirpath = f'./debug/PPP2/{symbol}/{timeframe}'
-    os.makedirs(dirpath, exist_ok=True)
+def plot2(symbol, timeframe, data0, dirpath):
     jst = data0[Columns.JST]
     tbegin = jst[0]
     tend = jst[-1]
@@ -182,14 +180,14 @@ def plot2(symbol, timeframe, data0):
     
         fig, axes = plt.subplots(2, 1, figsize=(20, 8))
         axes[0].plot(time, cl, color='blue', alpha=0.2)
-        axes[0].plot(time, ma_short, alpha=0.2, color='red', linewidth=0.1)
-        axes[0].plot(time, ma_mid, alpha=0.2, color='green', linewidth=0.1)
-        axes[0].plot(time, ma_long, alpha=0.2, color='blue', linewidth=0.1)
+        axes[0].scatter(time, ma_short, alpha=0.2, color='red', marker='o', s= 5)
+        axes[0].scatter(time, ma_mid, alpha=0.2, color='green', marker='o', s= 5)
+        axes[0].scatter(time, ma_long, alpha=0.2, color='blue', marker='o', s= 5)
         ax = axes[0].twinx()
         ax.plot(time, cross, alpha=0.5, color='orange')
         ax.set_ylim(-2, 2)
-        axes[1].plot(time, down, s=5, alpha=0.5, color='red')
-        axes[1].plot(time, up, s=5, alpha=0.5, color='green')
+        axes[1].plot(time, -1 * np.array(down), alpha=0.5, color='red')
+        axes[1].plot(time, up, alpha=0.5, color='green')
         axes[1].set_ylim(-2, 2)
         #axes[1].scatter(time[index + target], m[pre + target], marker='o', s=300, color='red', alpha=0.5)
         [ax.set_xlim(time[0], time[-1]) for ax in axes]
@@ -225,7 +223,7 @@ def make_trade_param(sl, trailing_target, trailing_stop):
                 'begin_minute': 0,
                 'hours': 0,
                 'sl': {
-                        'method': 'fix',
+                        'method': Simulation.SL_ADAPTIVE,
                         'value': sl
                     },
                 'target_profit': trailing_target,
@@ -239,14 +237,23 @@ def main():
     symbol = 'NIKKEI'
     timeframe = 'M5'
     #making = MakeFeatures(symbol, timeframe)
+    dirpath = f'./debug/PPP2/{symbol}/{timeframe}'
+    os.makedirs(dirpath, exist_ok=True)
 
     data = from_pickle(symbol, timeframe)
     technical_param = make_technical_param()
     trade_param = make_trade_param(100, 100, 100)
     result = trade(symbol, timeframe, data, technical_param, trade_param)
+    (df, summary, profit_curve) = result
+    print(summary)
+    df.to_csv(os.path.join(dirpath, 'trade_summary.csv'), index=False)
+    fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+    ax.plot(profit_curve[0], profit_curve[1])
+    fig.savefig(os.path.join(dirpath, 'profit.png'))
+     
     #[indices, vectors, prices] = up
     #plot(symbol, timeframe, True, data, up, pre, post, target)
-    plot2(symbol, timeframe, data)
+    plot2(symbol, timeframe, data, dirpath)
     
 def test():
     a = [1, 2, 3, 4, 5]

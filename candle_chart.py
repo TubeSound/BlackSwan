@@ -233,10 +233,10 @@ class CandleChart:
         if xlabel == False:
             self.ax.tick_params(labelbottom=False, bottom=False)
         
-    def drawLine(self, time, value, color='red', linestyle='solid', linewidth=1.0, should_set_xlim=True, ylim=None, label=''):
+    def drawLine(self, time, value, color='red', linestyle='solid', linewidth=1.0, should_set_xlim=True, ylim=None, alpha=1.0, label=''):
         self.time = time
         tfloat = awarePyTimeList2Float(time)
-        self.ax.plot(tfloat, value, color=color, linestyle=linestyle, linewidth=linewidth, label=label)
+        self.ax.plot(tfloat, value, color=color, linestyle=linestyle, linewidth=linewidth, label=label, alpha=alpha)
         if ylim is not None:
             self.ax.set_ylim(ylim[0], ylim[1])
         if should_set_xlim:

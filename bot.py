@@ -33,7 +33,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %I:%M:%S %p"
 )
 
-INITIAL_DATA_LENGTH = 500
+INITIAL_DATA_LENGTH = 12 * 48
 
 # -----
 
@@ -150,7 +150,7 @@ class Bot:
             entry_signal = self.buffer.data[self.entry_column][-1]
             exit_signal = self.buffer.data[self.exit_column][-1]
             if entry_signal != 0 or exit_signal != 0:
-                path = self.save_chart(f'{self.symbol}_{self.timeframe}', self.buffer.data, 100)
+                path = self.save_chart(f'{self.symbol}_{self.timeframe}', self.buffer.data, 12 * 24)
                 if exit_signal > 0:
                     pass
                     #self.notify.send(f'{self.symbol} 手仕舞ってね ', image=path)
@@ -182,13 +182,18 @@ class Bot:
         ma_l = data[Indicators.MA_LONG][n-length:]
         ma_m = data[Indicators.MA_MID][n-length:]
         ma_s = data[Indicators.MA_SHORT][n-length:]
-        
-        fig, ax = plt.subplots(1, 1, figsize=(7, 3))
-        chart = CandleChart(fig, ax, title=title, date_format=CandleChart.DATE_FORMAT_TIME)
+        up = data[Indicators.PPP_UP][n - length:]
+        down = -1 * np.array(data[Indicators.PPP_DOWN][n - length:])
+        fig, axes = gridFig([5, 1], (8, 5))
+        chart = CandleChart(fig, axes[0], title=title, date_format=CandleChart.DATE_FORMAT_TIME)
         chart.drawCandle(jst, op, hi, lo, cl)
         chart.drawLine(jst, ma_l, color='blue')
         chart.drawLine(jst, ma_m, color='green')
         chart.drawLine(jst, ma_s, color='red')
+        chart2 = CandleChart(fig, axes[1], title=title, date_format=CandleChart.DATE_FORMAT_TIME)
+        chart2.drawLine(jst, up, color='green', alpha=0.5)
+        chart2.drawLine(jst, down, color='red', alpha=0.5)
+        chart2.ylimit((-2, 2))
         dirpath = './tmp/chart/'
         os.makedirs(dirpath, exist_ok=True)
         path = os.path.join(dirpath, f'chart_{title}.png')

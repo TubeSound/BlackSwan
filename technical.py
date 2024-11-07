@@ -1160,14 +1160,16 @@ def PPP(timeframe, data: dict, long_term, mid_term, short_term, pre, post, targe
     current = 0
     for i in range(n):
         if current == 0:
-            if cross[i] != 0:
-                current = cross[i]
+            if up[i] != 0:
+                current = 1
+            elif down[i] != 0:
+                current = -1
         elif current == 1:
-            if cross[i] == -1:
+            if down[i] == 1:
                 current = -1
                 exits[i] = 1
         elif current == -1:
-            if cross[i] == 1:
+            if up[i] == 1:
                 current = 1
                 exits[i] = 1
         polarity[i] = current

@@ -144,7 +144,8 @@ class Positions:
         for i in pos:           
             position  = self.positions.pop(i)
             self.closed_positions.append(position)
-        
+        self.last_entry_price = None
+        self.last_entry_signal = None
         
     def summary(self):
         profit_sum = 0
@@ -196,6 +197,7 @@ class Simulation:
     SL_NONE = 0
     SL_FIX = 1
     SL_HIGH_LOW = 2
+    SL_ADAPTIVE = 3
     
     def __init__(self, data, trade_param:dict):
         self.data = data
@@ -203,6 +205,8 @@ class Simulation:
         self.strategy = self.trade_param['strategy'].upper()
         self.volume = trade_param['volume']
         self.position_num_max = trade_param['position_max']
+        self.last_entry_price = None
+        self.last_entry_signal = None
         try :
             begin_hour = self.trade_param['begin_hour']
             begin_minute = self.trade_param['begin_minute']
@@ -234,6 +238,16 @@ class Simulation:
                 high  = self.data['high']
                 d = high[index - value: index + 1]
                 return np.nanmax(d) - price
+        elif method == self.SL_ADAPTIVE:
+            if self.last_entry_signal is None:
+                return value
+            else:
+                if signal == self.last_entry_signal:
+                    return abs(price - self.last_entry_price)
+                else:
+                    self.last_entry_price = None
+                    self.last_entry_signal = None
+                    return value
         else:
             return 0
             
@@ -257,8 +271,10 @@ class Simulation:
             if entry[i] != 0:
                 #sl = self.calc_sl(i, entry[i], cl[i])
                 self.entry(entry, i, time[i], cl[i])
+
             if ext[i] != 0:
                 self.positions.exit_all_signal(ext[i], i, time[i], cl[i])
+
         summary, profit_curve = self.positions.summary()
         return self.positions.to_dataFrame(self.strategy), summary, profit_curve
         
@@ -336,4 +352,6 @@ class Simulation:
         if self.positions.num() < self.position_num_max:
             position = Position(self.trade_param, signal, index, time, price, self.volume, sl)
             self.positions.add(position)
+            self.last_entry_price = price
+            self.last_entry_signal = signal
         
