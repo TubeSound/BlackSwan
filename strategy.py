@@ -19,12 +19,9 @@ class Position:
     def __init__(self, trade_param, signal: Signal, index: int, time: datetime, price, volume, sl):
         self.id = None
         self.sl = sl
-        try:
-            self.target = trade_param['target']
-            self.trail_stop = trade_param['trail_stop']
-        except:
-            self.target = 0
-            self.trail_stop = 0
+        self.target = trade_param['target_profit']
+        self.trail_stop = trade_param['trail_stop']
+  
         self.signal = signal
         self.entry_index = index
         self.entry_time = time
@@ -136,14 +133,16 @@ class Positions:
         self.positions = []
     
     def exit_all_signal(self, signal, index, time, price, doten=False):
-        pos = []
+        removed = []
+        remain = []
         for i, position in enumerate(self.positions):
             if position.signal == signal:
                 position.exit(index, time, price, doten=doten)         
-                pos.append(i)     
-        for i in pos:           
-            position  = self.positions.pop(i)
-            self.closed_positions.append(position)
+                removed.append(position)
+            else:
+                remain.append(position)         
+        self.positions = remain
+        self.closed_positions += removed
         self.last_entry_price = None
         self.last_entry_signal = None
         
@@ -172,7 +171,7 @@ class Positions:
             win_rate = float(win) / float(n)
         else:
             win_rate = 0
-        return (n, profit_sum, win_rate), (tacc, acc)
+        return [n, profit_sum, win_rate], (tacc, acc)
     
     def to_dataFrame(self, strategy: str):
         def bool2str(v):
@@ -243,7 +242,8 @@ class Simulation:
                 return value
             else:
                 if signal == self.last_entry_signal:
-                    return abs(price - self.last_entry_price)
+                    v = abs(price - self.last_entry_price)
+                    return min([v, value])
                 else:
                     self.last_entry_price = None
                     self.last_entry_signal = None

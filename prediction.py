@@ -14,10 +14,11 @@ JST = tz.gettz('Asia/Tokyo')
 UTC = tz.gettz('utc')
 
 from common import Indicators, Columns
-from technical import PPP, detect_terms, is_nans
+from technical import PPP, SUPERTREND, SUPERTREND_SIGNAL, MA, detect_terms, is_nans
 from strategy import Simulation
 from time_utils import TimeFilter, TimeUtils
 from data_loader import DataLoader
+import random
 
 def makeFig(rows, cols, size):
     fig, ax = plt.subplots(rows, cols, figsize=(size[0], size[1]))
@@ -36,14 +37,31 @@ def gridFig(row_rate, size):
         begin = end
     return (fig, axes)
 
+def expand(name: str, dic: dict):
+    data = []
+    columns = []
+    for key, value in dic.items():
+        if name == '':
+            column = key
+        else:
+            column = name + '.' + key
+        if type(value) == dict:
+            d, c = expand(column, value)                    
+            data += d
+            columns += c
+        else:
+            data.append(value)
+            columns.append(column)
+    return data, columns 
+
 def from_pickle(symbol, timeframe):
     import pickle
-    if symbol == 'DOW' and timeframe == 'M15':
-        filepath = './data/BacktestMarket/BM_dow_M15.pkl'
-    elif symbol == 'NIKKEI' and timeframe == 'M15':
-        filepath = './data/BacktestMarket/BM_nikkei_M15.pkl'
-    else:
-        filepath = './data/Axiory/' + symbol + '_' + timeframe + '.pkl'
+    #if symbol == 'DOW' and timeframe == 'M15':
+    #    filepath = './data/BacktestMarket/BM_dow_M15.pkl'
+    #elif symbol == 'NIKKEI' and timeframe == 'M15':
+    #    filepath = './data/BacktestMarket/BM_nikkei_M15.pkl'
+    #else:
+    filepath = './data/Axiory/' + symbol + '_' + timeframe + '.pkl'
     with open(filepath, 'rb') as f:
         data0 = pickle.load(f)
     return data0
@@ -157,48 +175,67 @@ def plot(symbol, timeframe, is_long,  data, values, pre, post, target):
         plt.close()
         
         
-def plot2(symbol, timeframe, data0, dirpath):
+def plot2(strategy, symbol, timeframe, data0, dirpath, days=3):
     jst = data0[Columns.JST]
     tbegin = jst[0]
     tend = jst[-1]
     page = 0
     t = tbegin
-    t1 = t + timedelta(days=7)
+    t1 = t + timedelta(days=days)
     while t < tend:
         n, data = TimeUtils.slice(data0, jst, t, t1)   
         time = data[Columns.JST]
         cl = data[Columns.CLOSE] 
-        ma_short = data[Indicators.MA_SHORT]
-        ma_mid = data[Indicators.MA_MID]
-        ma_long = data[Indicators.MA_LONG]
-        cross =data[Indicators.MA_GOLDEN_CROSS]
-
-        entries = data[Indicators.PPP_ENTRY]
-        exits = data[Indicators.PPP_EXIT]
-        up = data[Indicators.PPP_UP]
-        down = data[Indicators.PPP_DOWN]
     
         fig, axes = plt.subplots(2, 1, figsize=(20, 8))
         axes[0].plot(time, cl, color='blue', alpha=0.2)
-        axes[0].scatter(time, ma_short, alpha=0.2, color='red', marker='o', s= 5)
-        axes[0].scatter(time, ma_mid, alpha=0.2, color='green', marker='o', s= 5)
-        axes[0].scatter(time, ma_long, alpha=0.2, color='blue', marker='o', s= 5)
-        ax = axes[0].twinx()
-        ax.plot(time, cross, alpha=0.5, color='orange')
-        ax.set_ylim(-2, 2)
-        axes[1].plot(time, -1 * np.array(down), alpha=0.5, color='red')
-        axes[1].plot(time, up, alpha=0.5, color='green')
-        axes[1].set_ylim(-2, 2)
-        #axes[1].scatter(time[index + target], m[pre + target], marker='o', s=300, color='red', alpha=0.5)
-        [ax.set_xlim(time[0], time[-1]) for ax in axes]
+        if strategy == 'PPP':
+            entries = data[Indicators.PPP_ENTRY]
+            exits = data[Indicators.PPP_EXIT]
+            ma_short = data[Indicators.MA_SHORT]
+            ma_mid = data[Indicators.MA_MID]
+            ma_long = data[Indicators.MA_LONG]
+            axes[0].scatter(time, ma_short, alpha=0.2, color='red', marker='o', s= 5)
+            axes[0].scatter(time, ma_mid, alpha=0.2, color='green', marker='o', s= 5)
+            axes[0].scatter(time, ma_long, alpha=0.2, color='blue', marker='o', s= 5)
+        elif strategy == 'supertrend':
+            entries = data[Indicators.SUPERTREND_ENTRY]
+            exits = data[Indicators.SUPERTREND_EXIT]
+            ma = data[Indicators.SUPERTREND_MA]
+            up = data[Indicators.SUPERTREND_U]
+            down = data[Indicators.SUPERTREND_L]
+            axes[0].scatter(time, up, alpha=0.6, color='green', marker='o', s= 5)
+            axes[0].scatter(time, down, alpha=0.4, color='orange', marker='o', s= 5)
+            axes[0].scatter(time, ma, alpha=0.4, color='red', marker='o', s= 5)
+            
+        for i, entry in enumerate(entries):
+            if entry == 1:
+                axes[0].scatter(time[i], cl[i], marker='^', s=200, alpha=0.4, color='green')
+            elif entry == -1:
+                axes[0].scatter(time[i], cl[i], marker='v', s=200, alpha=0.4, color='red')
+                
+        for i, ext in enumerate(exits):
+            if ext == 1:
+                axes[0].scatter(time[i], cl[i], marker='x', s=400, alpha=0.4, color='gray')
+        
+        if strategy == 'PPP':
+            up = data[Indicators.PPP_UP]
+            down = data[Indicators.PPP_DOWN]
+            ax = axes[0].twinx()
+            ax.set_ylim(-2, 2)
+            axes[1].plot(time, -1 * np.array(down), alpha=0.5, color='red')
+            axes[1].plot(time, up, alpha=0.5, color='green')
+            axes[1].set_ylim(-2, 2)
+            #axes[1].scatter(time[index + target], m[pre + target], marker='o', s=300, color='red', alpha=0.5)
+            [ax.set_xlim(time[0], time[-1]) for ax in axes]
         fig.savefig(os.path.join(dirpath, f'ma_graph_#{page}.png'))
         page += 1
         plt.close()        
         t = t1
-        t1 = t + timedelta(days=7)
+        t1 = t + timedelta(days=days)
         
         
-def trade(symbol, timeframe, data, technical_param, trade_param):
+def trade_ppp(symbol, timeframe, data, technical_param, trade_param):
     p1 = technical_param['MA']
     p2 = technical_param['PPP']
     PPP(timeframe, data, p1['long_term'], p1['mid_term'], p1['short_term'], p2['pre'], p2['post'], p2['target'])
@@ -207,48 +244,127 @@ def trade(symbol, timeframe, data, technical_param, trade_param):
     trade_num, profit, win_rate = summary
     return (df, summary, profit_curve)
 
-def make_technical_param():
-    param = {'MA': {'long_term': 60, 'mid_term': 20, 'short_term': 5}}
+def trade_supertrend(symbol, timeframe, data, technical_param, trade_param):
+    p = technical_param
+    SUPERTREND(data, p['atr_window'], p['atr_multiply'])
+    SUPERTREND_SIGNAL(data, p['short_term'])
+    sim = Simulation(data, trade_param)        
+    df, summary, profit_curve = sim.run(data, Indicators.SUPERTREND_ENTRY, Indicators.SUPERTREND_EXIT)
+    trade_num, profit, win_rate = summary
+    return (df, summary, profit_curve)
+
+
+def make_technical_param_ppp(randomize=False):
+    def gen3():
+        s = m = l = 0
+        while s >= m or m >= l:
+            s = random.randint(1, 5) * 5
+            m = random.randint(2, 10) * 5
+            l = random.randint(3, 20) * 5
+        return s, m, l    
+    
+    if randomize:
+        short_term, mid_term, long_term = gen3()
+        post = random.randint(1, 6) * 6
+    else:
+        short_term = 5
+        mid_term = 20
+        long_term = 60
+        post = 12 * 1
+    
+    param = {'MA': {'long_term': long_term, 'mid_term': mid_term, 'short_term': short_term}}
     pre = 12 * 4
-    post = 12 * 1
     target = 12 * 16
     param['PPP'] = {'pre': pre, 'post': post, 'target': target}
     return param
 
-        
-def make_trade_param(sl, trailing_target, trailing_stop):
+def make_technical_param_ppp(randomize=False):
+    def gen3():
+        s = m = l = 0
+        while s >= m or m >= l:
+            s = random.randint(1, 5) * 5
+            m = random.randint(2, 10) * 5
+            l = random.randint(3, 20) * 5
+        return s, m, l    
+    
+    if randomize:
+        short_term, mid_term, long_term = gen3()
+        post = random.randint(1, 6) * 6
+    else:
+        short_term = 5
+        mid_term = 20
+        long_term = 60
+        post = 12 * 1
+    
+    param = {'MA': {'long_term': long_term, 'mid_term': mid_term, 'short_term': short_term}}
+    pre = 12 * 4
+    target = 12 * 16
+    param['PPP'] = {'pre': pre, 'post': post, 'target': target}
+    return param
+
+
+def make_technical_param_supertrend(randomize=False):
+    if randomize:
+        window = random.randint(10, 100)
+        multiply = random.random() * 3 + 0.5
+        ma = random.randint(10, 100)
+        term = random.randint(4, 50)
+    else:
+        window = 40
+        multiply = 3.0
+        ma = 40
+        term = 20
+    param = {  
+                'atr_window': window, 
+                'atr_multiply': multiply,
+                'ma_window': ma,
+                'short_term': term,
+            }
+    return param
+    
+def make_trade_param(randomize=False):
+    if randomize:
+        sl = random.randint(1, 10) * 50
+        target_profit = random.randint(1, 10) * 50
+        trail_stop = random.randint(1, 5) * 50
+    else:
+        sl = 200
+        target_profit = 100
+        trail_stop = 100
+    
     param =  {
-                'strategy': 'supertrend',
+                'strategy': 'PPP',
                 'begin_hour': 0,
                 'begin_minute': 0,
                 'hours': 0,
                 'sl': {
-                        'method': Simulation.SL_ADAPTIVE,
+                        'method': Simulation.SL_FIX,
                         'value': sl
                     },
-                'target_profit': trailing_target,
-                'trailing_stop': trailing_stop, 
+                'target_profit': target_profit,
+                'trail_stop': trail_stop, 
                 'volume': 0.1, 
-                'position_max': 5, 
+                'position_max': 10, 
                 'timelimit': 0}
     return param
  
-def main():
+def test(strategy):
     symbol = 'NIKKEI'
-    timeframe = 'M5'
+    timeframe = 'M15'
     #making = MakeFeatures(symbol, timeframe)
-    dirpath = f'./debug/PPP2/{symbol}/{timeframe}'
+    dirpath = f'./debug/{strategy}/{symbol}/{timeframe}'
     os.makedirs(dirpath, exist_ok=True)
 
     data0 = from_pickle(symbol, timeframe)
     jst = data0[Columns.JST]
     t1 = jst[-1]
-    t0 = t1 - timedelta(days=14)
+    t0 = t1 - timedelta(days=30*6)
     n, data = TimeUtils.slice(data0, jst, t0, t1)   
     
-    technical_param = make_technical_param()
-    trade_param = make_trade_param(100, 100, 100)
-    result = trade(symbol, timeframe, data, technical_param, trade_param)
+    trade_param = make_trade_param()
+    if strategy.find('supertrend') >= 0:
+        technical_param = make_technical_param_supertrend()
+        result = trade_supertrend(symbol, timeframe, data, technical_param, trade_param)
     (df, summary, profit_curve) = result
     print(summary)
     df.to_csv(os.path.join(dirpath, 'trade_summary.csv'), index=False)
@@ -258,17 +374,45 @@ def main():
      
     #[indices, vectors, prices] = up
     #plot(symbol, timeframe, True, data, up, pre, post, target)
-    plot2(symbol, timeframe, data, dirpath)
+    plot2(strategy, symbol, timeframe, data, dirpath)
     
-def test():
-    a = [1, 2, 3, 4, 5]
-    sl = slice(0, 3, 1)
+def optimize(strategy):
+    symbol = 'NIKKEI'
+    timeframe = 'M15'
+    #making = MakeFeatures(symbol, timeframe)
+    dirpath = f'./optimize/{strategy}/{symbol}/{timeframe}'
+    os.makedirs(dirpath, exist_ok=True)
 
-    b = a[sl]
-    print(a)
-    print(b)
-    
+    data0 = from_pickle(symbol, timeframe)
+    jst = data0[Columns.JST]
+    t1 = jst[-1]
+    t0 = t1 - timedelta(days=180)
+    n, data = TimeUtils.slice(data0, jst, t0, t1)   
+
+    out = []
+    for i in range(1000):
+        trade_param = make_trade_param(randomize=True)
+        if strategy.find('supertrend') >= 0:
+            technical_param = make_technical_param_supertrend(randomize=True)
+            result = trade_supertrend(symbol, timeframe, data, technical_param, trade_param)
+        (df, summary, profit_curve) = result
+        trade_num, profit, win_rate = summary
+        d1, columns1 = expand('p1', technical_param)
+        d2, columns2 = expand('p2', trade_param)
+        d = [i] + d1 + d2 + summary 
+        out.append(d)
+        
+        print(i, summary)
+        if profit > 5000:
+            fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+            ax.plot(profit_curve[0], profit_curve[1])
+            fig.savefig(os.path.join(dirpath, f'{symbol}_{timeframe}_profit#{i}.png'))
+     
+    columns = ['no'] + columns1 + columns2 + ['trade_num', 'profit', 'win_rate']
+    df = pd.DataFrame(data=out, columns=columns)
+    df.to_csv(os.path.join(dirpath, 'trade_summary.csv'), index=False)
       
     
 if __name__ == '__main__':
-    main()
+    test('supertrend')
+    #optimize('supertrend')

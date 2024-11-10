@@ -1065,9 +1065,20 @@ def SUPERTREND_SIGNAL(data: dict, short_term):
                 stop_price[i] = upper[i]
             else:
                 trend[i] = DOWN
+    
+    exits = nans(n)
+    ent = False
+    for i in range(n):
+        if sig[i] != 0:
+            if ent:
+                exits[i] = 1
+            else:
+                ent = True
            
+    data[Indicators.SUPERTREND_MA] = price
     data[Indicators.SUPERTREND] = trend  
-    data[Indicators.SUPERTREND_SIGNAL] = sig      
+    data[Indicators.SUPERTREND_ENTRY] = sig
+    data[Indicators.SUPERTREND_EXIT]  = exits     
     data[Indicators.SUPERTREND_U] = upper  
     data[Indicators.SUPERTREND_L] = lower  
     return 
