@@ -136,6 +136,8 @@ class Positions:
         removed = []
         remain = []
         for i, position in enumerate(self.positions):
+            if index <= position.entry_index:
+                continue
             if position.signal == signal:
                 position.exit(index, time, price, doten=doten)         
                 removed.append(position)

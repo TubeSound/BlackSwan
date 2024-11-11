@@ -376,9 +376,7 @@ def test(strategy):
     #plot(symbol, timeframe, True, data, up, pre, post, target)
     plot2(strategy, symbol, timeframe, data, dirpath)
     
-def optimize(strategy):
-    symbol = 'NIKKEI'
-    timeframe = 'M15'
+def optimize(symbol, timefram, strategy):
     #making = MakeFeatures(symbol, timeframe)
     dirpath = f'./optimize/{strategy}/{symbol}/{timeframe}'
     os.makedirs(dirpath, exist_ok=True)
@@ -414,5 +412,18 @@ def optimize(strategy):
       
     
 if __name__ == '__main__':
-    test('supertrend')
-    #optimize('supertrend')
+    args = sys.argv
+    if len(args) != 4:
+        symbol = 'NIKKEI'
+        timeframe = 'M5'
+        strategy = 'PPP'
+    else:        
+        symbol = args[1]
+        timeframe = args[2]
+        if args[3] == 'su':
+            strategy = 'supertrend'
+        elif args[3] == 'ppp':
+            strategy = 'PPP'
+        
+    #test('supertrend')
+    optimize(symbol, timeframe, strategy)

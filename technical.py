@@ -1066,12 +1066,12 @@ def SUPERTREND_SIGNAL(data: dict, short_term):
             else:
                 trend[i] = DOWN
     
-    exits = nans(n)
+    exits = full(n, 0)
     ent = False
     for i in range(n):
         if sig[i] != 0:
             if ent:
-                exits[i] = 1
+                exits[i] = sig[i]
             else:
                 ent = True
            
