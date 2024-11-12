@@ -322,7 +322,12 @@ def make_technical_param_supertrend(randomize=False):
             }
     return param
     
-def make_trade_param(randomize=False):
+def make_trade_param(symbol, randomize=False):
+    if symbol == 'XAUUSD':
+        k = 0.1
+    else:
+        k = 1.0
+    
     if randomize:
         sl = random.randint(1, 10) * 50
         target_profit = random.randint(1, 10) * 50
@@ -339,18 +344,16 @@ def make_trade_param(randomize=False):
                 'hours': 0,
                 'sl': {
                         'method': Simulation.SL_FIX,
-                        'value': sl
+                        'value': int(sl * k)
                     },
-                'target_profit': target_profit,
-                'trail_stop': trail_stop, 
+                'target_profit': int(target_profit * k),
+                'trail_stop': int(trail_stop * k), 
                 'volume': 0.1, 
                 'position_max': 10, 
                 'timelimit': 0}
-    return param
+    return param, k
  
-def test(strategy):
-    symbol = 'NIKKEI'
-    timeframe = 'M15'
+def test(symbol, timefram, strategy):
     #making = MakeFeatures(symbol, timeframe)
     dirpath = f'./debug/{strategy}/{symbol}/{timeframe}'
     os.makedirs(dirpath, exist_ok=True)
@@ -361,7 +364,7 @@ def test(strategy):
     t0 = t1 - timedelta(days=30*6)
     n, data = TimeUtils.slice(data0, jst, t0, t1)   
     
-    trade_param = make_trade_param()
+    trade_param, k = make_trade_param()
     if strategy.find('supertrend') >= 0:
         technical_param = make_technical_param_supertrend()
         result = trade_supertrend(symbol, timeframe, data, technical_param, trade_param)
@@ -389,7 +392,7 @@ def optimize(symbol, timefram, strategy):
 
     out = []
     for i in range(1000):
-        trade_param = make_trade_param(randomize=True)
+        trade_param, k = make_trade_param(symbol, randomize=True)
         if strategy.find('supertrend') >= 0:
             technical_param = make_technical_param_supertrend(randomize=True)
             result = trade_supertrend(symbol, timeframe, data, technical_param, trade_param)
@@ -401,7 +404,7 @@ def optimize(symbol, timefram, strategy):
         out.append(d)
         
         print(i, summary)
-        if profit > 5000:
+        if profit > 5000 * k:
             fig, ax = plt.subplots(1, 1, figsize=(10, 4))
             ax.plot(profit_curve[0], profit_curve[1])
             fig.savefig(os.path.join(dirpath, f'{symbol}_{timeframe}_profit#{i}.png'))
@@ -414,9 +417,9 @@ def optimize(symbol, timefram, strategy):
 if __name__ == '__main__':
     args = sys.argv
     if len(args) != 4:
-        symbol = 'NIKKEI'
-        timeframe = 'M5'
-        strategy = 'PPP'
+        symbol = 'DOW'
+        timeframe = 'M15'
+        strategy = 'supertrend'
     else:        
         symbol = args[1]
         timeframe = args[2]

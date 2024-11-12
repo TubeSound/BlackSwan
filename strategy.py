@@ -136,7 +136,7 @@ class Positions:
         removed = []
         remain = []
         for i, position in enumerate(self.positions):
-            if index <= position.entry_index:
+            if index == position.entry_index:
                 continue
             if position.signal == signal:
                 position.exit(index, time, price, doten=doten)         
@@ -270,13 +270,11 @@ class Simulation:
                 self.positions.exit_all(i, time[i], cl[i])
                 break
             self.positions.update(i, time[i], op[i], hi[i], lo[i], cl[i])
+            if ext[i] != 0:
+                self.positions.exit_all_signal(ext[i], i, time[i], cl[i])
             if entry[i] != 0:
                 #sl = self.calc_sl(i, entry[i], cl[i])
                 self.entry(entry[i], i, time[i], cl[i])
-
-            if ext[i] != 0:
-                self.positions.exit_all_signal(ext[i], i, time[i], cl[i])
-
         summary, profit_curve = self.positions.summary()
         return self.positions.to_dataFrame(self.strategy), summary, profit_curve
         

@@ -1071,7 +1071,10 @@ def SUPERTREND_SIGNAL(data: dict, short_term):
     for i in range(n):
         if sig[i] != 0:
             if ent:
-                exits[i] = sig[i]
+                if sig[i] == Signal.LONG:
+                    exits[i] = Signal.SHORT
+                elif sig[i] == Signal.SHORT:
+                    exits[i] = Signal.LONG
             else:
                 ent = True
            
@@ -1182,7 +1185,7 @@ def PPP(timeframe, data: dict, long_term, mid_term, short_term, pre, post, targe
         elif current == -1:
             if up[i] == 1:
                 current = 1
-                exits[i] = 1
+                exits[i] = -1
         polarity[i] = current
           
     data[Indicators.MA_GOLDEN_CROSS] = cross
