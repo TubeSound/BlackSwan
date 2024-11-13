@@ -13,7 +13,7 @@ from dateutil import tz
 JST = tz.gettz('Asia/Tokyo')
 UTC = tz.gettz('utc')
 
-from common import Indicators, Columns
+from common import Indicators, Columns, Signal
 from technical import PPP, SUPERTREND, SUPERTREND_SIGNAL, MA, detect_terms, is_nans
 from strategy import Simulation
 from time_utils import TimeFilter, TimeUtils
@@ -175,7 +175,7 @@ def plot(symbol, timeframe, is_long,  data, values, pre, post, target):
         plt.close()
         
         
-def plot2(strategy, symbol, timeframe, data0, dirpath, days=3):
+def plot2(strategy, symbol, timeframe, data0, df, dirpath, days=3):
     jst = data0[Columns.JST]
     tbegin = jst[0]
     tend = jst[-1]
@@ -210,13 +210,41 @@ def plot2(strategy, symbol, timeframe, data0, dirpath, days=3):
             
         for i, entry in enumerate(entries):
             if entry == 1:
-                axes[0].scatter(time[i], cl[i], marker='^', s=200, alpha=0.4, color='green')
+                color = 'green'
             elif entry == -1:
-                axes[0].scatter(time[i], cl[i], marker='v', s=200, alpha=0.4, color='red')
+                color= 'red'
+            else:
+                continue
+            axes[0].vlines(time[i], min(cl), max(cl), lw=2, alpha=0.4, color=color)
+            
                 
-        for i, ext in enumerate(exits):
-            if ext == 1:
-                axes[0].scatter(time[i], cl[i], marker='x', s=400, alpha=0.4, color='gray')
+        for i in range(len(df)):
+            record = df.iloc[i, :]
+            sig = record['signal']
+            if sig == Signal.LONG:
+                color = 'green'
+                marker1 = '^'
+            elif sig == Signal.SHORT:
+                color = 'red'
+                marker1 = 'v'
+            profit = record['profit']
+            t_entry_str = record['entry_time']
+            t_entry = datetime.strptime(t_entry_str[:16], '%Y-%m-%d %H:%M').astimezone(JST)
+            if t_entry >= time[0] and t_entry <= time[-1]:
+                axes[0].scatter(t_entry, record['entry_price'], color=color, alpha=0.4, marker=marker1, s=200)
+                axes[0].text(t_entry, min(cl), f'e{i}')        
+            t_exit_str = record['exit_time']
+            t_exit = datetime.strptime(t_exit_str[:16], '%Y-%m-%d %H:%M').astimezone(JST)
+            if profit > 0:
+                p = '+'
+                marker2 = 'o'
+            else:
+                p = '-'
+                marker2 = 'x'
+            if t_exit >= time[0] and t_exit <= time[-1]:
+                axes[0].scatter(t_exit, record['exit_price'], color=color, alpha=0.4, marker=marker2, s=300)
+                axes[0].text(t_exit, max(cl), f'c{i}{p}')
+
         
         if strategy == 'PPP':
             up = data[Indicators.PPP_UP]
@@ -311,9 +339,9 @@ def make_technical_param_supertrend(randomize=False):
         term = random.randint(4, 50)
     else:
         window = 40
-        multiply = 3.0
+        multiply = 1.4
         ma = 40
-        term = 20
+        term = 12
     param = {  
                 'atr_window': window, 
                 'atr_multiply': multiply,
@@ -333,12 +361,12 @@ def make_trade_param(symbol, randomize=False):
         target_profit = random.randint(1, 10) * 50
         trail_stop = random.randint(1, 5) * 50
     else:
-        sl = 200
-        target_profit = 100
-        trail_stop = 100
+        sl = 250
+        target_profit = 300
+        trail_stop = 200
     
     param =  {
-                'strategy': 'PPP',
+                'strategy': 'supertrend',
                 'begin_hour': 0,
                 'begin_minute': 0,
                 'hours': 0,
@@ -355,7 +383,7 @@ def make_trade_param(symbol, randomize=False):
  
 def test(symbol, timefram, strategy):
     #making = MakeFeatures(symbol, timeframe)
-    dirpath = f'./debug/{strategy}/{symbol}/{timeframe}'
+    dirpath = f'./test/{strategy}/{symbol}/{timeframe}'
     os.makedirs(dirpath, exist_ok=True)
 
     data0 = from_pickle(symbol, timeframe)
@@ -364,7 +392,7 @@ def test(symbol, timefram, strategy):
     t0 = t1 - timedelta(days=30*6)
     n, data = TimeUtils.slice(data0, jst, t0, t1)   
     
-    trade_param, k = make_trade_param()
+    trade_param, k = make_trade_param(symbol)
     if strategy.find('supertrend') >= 0:
         technical_param = make_technical_param_supertrend()
         result = trade_supertrend(symbol, timeframe, data, technical_param, trade_param)
@@ -374,10 +402,7 @@ def test(symbol, timefram, strategy):
     fig, ax = plt.subplots(1, 1, figsize=(10, 4))
     ax.plot(profit_curve[0], profit_curve[1])
     fig.savefig(os.path.join(dirpath, 'profit.png'))
-     
-    #[indices, vectors, prices] = up
-    #plot(symbol, timeframe, True, data, up, pre, post, target)
-    plot2(strategy, symbol, timeframe, data, dirpath)
+    plot2(strategy, symbol, timeframe, data, df, dirpath)
     
 def optimize(symbol, timefram, strategy):
     #making = MakeFeatures(symbol, timeframe)
@@ -417,7 +442,7 @@ def optimize(symbol, timefram, strategy):
 if __name__ == '__main__':
     args = sys.argv
     if len(args) != 4:
-        symbol = 'DOW'
+        symbol = 'NIKKEI'
         timeframe = 'M15'
         strategy = 'supertrend'
     else:        
@@ -428,5 +453,5 @@ if __name__ == '__main__':
         elif args[3] == 'ppp':
             strategy = 'PPP'
         
-    #test('supertrend')
-    optimize(symbol, timeframe, strategy)
+    test(symbol, timeframe, strategy)
+    #optimize(symbol, timeframe, strategy)
