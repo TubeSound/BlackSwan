@@ -215,9 +215,10 @@ def plot2(strategy, symbol, timeframe, data0, df, dirpath, days=3):
                 color= 'red'
             else:
                 continue
-            axes[0].vlines(time[i], min(cl), max(cl), lw=2, alpha=0.4, color=color)
+            axes[0].vlines(time[i], min(cl), max(cl), lw=2, linestyle='dotted', alpha=0.4, color=color)
             
-                
+        entry_count = 0
+        exit_count = 0        
         for i in range(len(df)):
             record = df.iloc[i, :]
             sig = record['signal']
@@ -230,20 +231,25 @@ def plot2(strategy, symbol, timeframe, data0, df, dirpath, days=3):
             profit = record['profit']
             t_entry_str = record['entry_time']
             t_entry = datetime.strptime(t_entry_str[:16], '%Y-%m-%d %H:%M').astimezone(JST)
+            ylim = axex[0].get_ylim()
             if t_entry >= time[0] and t_entry <= time[-1]:
+                entry_count += 1
                 axes[0].scatter(t_entry, record['entry_price'], color=color, alpha=0.4, marker=marker1, s=200)
-                axes[0].text(t_entry, min(cl), f'e{i}')        
+                dy = (entry_count % 3) * ylim / 20 
+                axes[0].text(t_entry, min(cl) + dy, f'e{i}')        
             t_exit_str = record['exit_time']
             t_exit = datetime.strptime(t_exit_str[:16], '%Y-%m-%d %H:%M').astimezone(JST)
             if profit > 0:
-                p = '+'
+                p = f'+{profit}'
                 marker2 = 'o'
             else:
-                p = '-'
+                p = f'{profit}'
                 marker2 = 'x'
             if t_exit >= time[0] and t_exit <= time[-1]:
                 axes[0].scatter(t_exit, record['exit_price'], color=color, alpha=0.4, marker=marker2, s=300)
-                axes[0].text(t_exit, max(cl), f'c{i}{p}')
+                exit_count += 1
+                dy = (exit_count % 3) * ylim / 20 
+                axes[0].text(t_exit, max(cl) - dy, f'c{i}{p}')
 
         
         if strategy == 'PPP':
@@ -416,7 +422,7 @@ def optimize(symbol, timefram, strategy):
     n, data = TimeUtils.slice(data0, jst, t0, t1)   
 
     out = []
-    for i in range(1000):
+    for i in range(5000):
         trade_param, k = make_trade_param(symbol, randomize=True)
         if strategy.find('supertrend') >= 0:
             technical_param = make_technical_param_supertrend(randomize=True)
@@ -429,7 +435,7 @@ def optimize(symbol, timefram, strategy):
         out.append(d)
         
         print(i, summary)
-        if profit > 5000 * k:
+        if profit > 10000 * k:
             fig, ax = plt.subplots(1, 1, figsize=(10, 4))
             ax.plot(profit_curve[0], profit_curve[1])
             fig.savefig(os.path.join(dirpath, f'{symbol}_{timeframe}_profit#{i}.png'))
@@ -453,5 +459,5 @@ if __name__ == '__main__':
         elif args[3] == 'ppp':
             strategy = 'PPP'
         
-    test(symbol, timeframe, strategy)
-    #optimize(symbol, timeframe, strategy)
+    #test(symbol, timeframe, strategy)
+    optimize(symbol, timeframe, strategy)
