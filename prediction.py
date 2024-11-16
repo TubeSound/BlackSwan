@@ -359,6 +359,8 @@ def make_technical_param_supertrend(randomize=False):
 def make_trade_param(symbol, randomize=False):
     if symbol == 'XAUUSD':
         k = 0.1
+    elif symbol == 'NSDQ':
+        k = 0.5
     else:
         k = 1.0
     
@@ -412,17 +414,19 @@ def test(symbol, timefram, strategy):
     
 def optimize(symbol, timefram, strategy):
     #making = MakeFeatures(symbol, timeframe)
-    dirpath = f'./optimize/{strategy}/{symbol}/{timeframe}'
+    dirpath = f'./optimize_all/{strategy}/{symbol}/{timeframe}'
     os.makedirs(dirpath, exist_ok=True)
 
-    data0 = from_pickle(symbol, timeframe)
-    jst = data0[Columns.JST]
-    t1 = jst[-1]
-    t0 = t1 - timedelta(days=180)
-    n, data = TimeUtils.slice(data0, jst, t0, t1)   
+    data = from_pickle(symbol, timeframe)
+    #jst = data0[Columns.JST]
+    #t0 = jst[0]
+    #t1 = t0 + timedelta(days=180)
+    #n, data = TimeUtils.slice(data0, jst, t0, t1)   
+    jst = data[Columns.JST]
+    print('Data length', len(jst), jst[0], jst[-1])
 
     out = []
-    for i in range(5000):
+    for i in range(1000):
         trade_param, k = make_trade_param(symbol, randomize=True)
         if strategy.find('supertrend') >= 0:
             technical_param = make_technical_param_supertrend(randomize=True)
@@ -435,20 +439,22 @@ def optimize(symbol, timefram, strategy):
         out.append(d)
         
         print(i, summary)
-        if profit > 10000 * k:
+        if profit > 15000 * k:
             fig, ax = plt.subplots(1, 1, figsize=(10, 4))
             ax.plot(profit_curve[0], profit_curve[1])
             fig.savefig(os.path.join(dirpath, f'{symbol}_{timeframe}_profit#{i}.png'))
      
-    columns = ['no'] + columns1 + columns2 + ['trade_num', 'profit', 'win_rate']
-    df = pd.DataFrame(data=out, columns=columns)
-    df.to_csv(os.path.join(dirpath, 'trade_summary.csv'), index=False)
-      
+        try:
+            columns = ['no'] + columns1 + columns2 + ['trade_num', 'profit', 'win_rate']
+            df = pd.DataFrame(data=out, columns=columns)
+            df.to_csv(os.path.join(dirpath, 'trade_summary.csv'), index=False)
+        except:
+            continue
     
 if __name__ == '__main__':
     args = sys.argv
     if len(args) != 4:
-        symbol = 'NIKKEI'
+        symbol = 'XAUUSD'
         timeframe = 'M15'
         strategy = 'supertrend'
     else:        
@@ -459,5 +465,6 @@ if __name__ == '__main__':
         elif args[3] == 'ppp':
             strategy = 'PPP'
         
+    prinnt(symbol, timeframe, strategy)
     #test(symbol, timeframe, strategy)
     optimize(symbol, timeframe, strategy)
