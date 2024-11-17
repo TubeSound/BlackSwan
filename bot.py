@@ -85,7 +85,7 @@ class Bot:
         self.entry_column = entry_column
         self.exit_column = exit_column
         self.technical_param = technical_param
-        self.notify = LineNotify() 
+        self.notify = LineNotify('Duck') 
         mt5 = Mt5Trade(symbol)
         self.mt5 = mt5
         self.delta_hour_from_gmt = None
