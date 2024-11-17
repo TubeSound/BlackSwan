@@ -16,7 +16,7 @@ from candle_chart import CandleChart, makeFig, gridFig
 from data_buffer import DataBuffer
 from time_utils import TimeUtils
 from utils import Utils
-from technical import PPP
+from technical import SUPERTREND, SUPERTREND_SIGNAL
 from common import Signal, Indicators
 from line_notify import LineNotify
 
@@ -33,7 +33,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %I:%M:%S %p"
 )
 
-INITIAL_DATA_LENGTH = 12 * 48
+INITIAL_DATA_LENGTH = 24 * 60
 
 # -----
 
@@ -103,16 +103,9 @@ class Bot:
         print(s)    
         
     def calc_indicators(self, timeframe, data: dict, param: dict):
-        ppp = param['PPP']
-        long_term = ppp['long_term']
-        mid_term = ppp['mid_term']
-        short_term = ppp['short_term']
-        tap = ppp['tap']
-        threshold = ppp['threshold']
-        pre = 12 * 4
-        post = 12 * 1
-        target = 12 * 4
-        PPP(timeframe, data, long_term, mid_term, short_term, pre, post, target, threshold=threshold, tap=tap)
+        
+        SUPERTREND(data, param['atr_window'], param['atr_multiply'])
+        SUPERTREND_SIGNAL(data, param['short_term'])
         
         
     def set_sever_time(self, begin_month, begin_sunday, end_month, end_sunday, delta_hour_from_gmt_in_summer):
@@ -203,53 +196,50 @@ class Bot:
         
 
 def technical_param(symbol):
-    param_nikkei = {'PPP': {
-                        'long_term': 60,
-                        'mid_term': 20,
-                        'short_term': 5,
-                        'tap': 0,
-                        'threshold': 0.01
-                    }
-            }
-    if symbol.lower() == 'nikkei':
-        return param_nikkei
-    
-    param_dow = {'PPP': {
-                        'long_term': 60,
-                        'mid_term': 20,
-                        'short_term': 5,
-                        'tap': 0,
-                        'threshold': 0.01
-                    }
-            }
-    if symbol.lower() == 'dow':
-        return param_dow
-    
+    param = {}
+    if symbol == 'NIKKEI':
+        param['atr_window'] = 29
+        param['atr_multiply'] = 2.7
+        param['ma_window'] = 48
+        param['short_term'] = 11
+    elif symbol == 'DOW':
+        param['atr_window'] = 79
+        param['atr_multiply'] = 2.4
+        param['ma_window'] = 38
+        param['short_term'] = 17
+    elif symbol == 'NSDQ':
+        param['atr_window'] = 29
+        param['atr_multiply'] = 1.5
+        param['ma_window'] = 14
+        param['short_term'] = 13
+    elif symbol == 'XAUUSD':
+        param['atr_window'] = 21
+        param['atr_multiply'] = 3.2
+        param['ma_window'] = 93
+        param['short_term'] = 34
+    return param
     
 
 def create_bot(symbol, timeframe):
-    bot = Bot(symbol, timeframe, 1, Indicators.PPP_ENTRY, Indicators.PPP_EXIT, technical_param(symbol))    
+    bot = Bot(symbol, timeframe, 1, Indicators.SUPERTREND_ENTRY, Indicators.SUPERTREND_EXIT, technical_param(symbol))    
     bot.set_sever_time(3, 2, 11, 1, 3.0)
     return bot
 
-def create_usdjpy_bot():
-    symbol = 'USDJPY'
-    timeframe = 'M5'
-    technical = {'atr_window': 40, 'atr_multiply': 3.0}
-    trade = {'sl': 0.3, 'target_profit': 0.4, 'trailing_stop': 0.1, 'volume': 0.1, 'position_max': 5, 'timelimit': 40}
-    bot = Bot(symbol, timeframe, 1, Indicators.SUPERTREND_SIGNAL, technical, trade)    
-    return bot
      
 def test():
-    
-    bot1 = create_bot( 'NIKKEI', 'M5')
-    Mt5Trade.connect()
-    bot1.run()
-    bot2 = create_bot('DOW', 'M5')
-    bot2.run()
+    symbols = ['NIKKEI', 'DOW', 'NSDQ']
+    bots = {}
+    for i, symbol in enumerate(symbols):
+        bot = create_bot(symbol, 'M15')
+        if i == 0:
+            Mt5Trade.connect()
+        bot.run()
+        bots[symbol] = bot
+        
     while True:
-        scheduler.enter(10, 1, bot1.update)
-        scheduler.enter(10, 2, bot2.update)
+        for i, symbol in enumerate(symbols):
+            bot = bots[symbol]
+            scheduler.enter(10, i + 1, bot.update)
         scheduler.run()
 
 if __name__ == '__main__':
