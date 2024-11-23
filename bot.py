@@ -163,6 +163,7 @@ class Bot:
         return n
 
     def save_chart(self, title, data, length):
+        fig, ax = plt.subplots(1, 1, figsize=(12, 8))
     
         jst = data[Columns.JST]
         n = len(jst)
@@ -172,21 +173,23 @@ class Bot:
         hi = data[Columns.HIGH][n-length:]
         lo = data[Columns.LOW][n-length:]
         cl = data[Columns.CLOSE][n-length:]
-        ma_l = data[Indicators.MA_LONG][n-length:]
-        ma_m = data[Indicators.MA_MID][n-length:]
-        ma_s = data[Indicators.MA_SHORT][n-length:]
-        up = data[Indicators.PPP_UP][n - length:]
-        down = -1 * np.array(data[Indicators.PPP_DOWN][n - length:])
-        fig, axes = gridFig([5, 1], (8, 5))
-        chart = CandleChart(fig, axes[0], title=title, date_format=CandleChart.DATE_FORMAT_TIME)
-        chart.drawCandle(jst, op, hi, lo, cl)
-        chart.drawLine(jst, ma_l, color='blue')
-        chart.drawLine(jst, ma_m, color='green')
-        chart.drawLine(jst, ma_s, color='red')
-        chart2 = CandleChart(fig, axes[1], title=title, date_format=CandleChart.DATE_FORMAT_TIME)
-        chart2.drawLine(jst, up, color='green', alpha=0.5)
-        chart2.drawLine(jst, down, color='red', alpha=0.5)
-        chart2.ylimit((-2, 2))
+        entries = data[Indicators.SUPERTREND_ENTRY][n - length:]
+        exits = data[Indicators.SUPERTREND_EXIT]
+        ma = data[Indicators.SUPERTREND_MA][n - length:]
+        up = data[Indicators.SUPERTREND_U][n - length:]
+        down = data[Indicators.SUPERTREND_L][n - length:]
+        ax.plot(jst, cl, color='blue', alpha=0.2)
+        ax.scatter(jst, up, alpha=0.6, color='green', marker='o', s= 5)
+        ax.scatter(jst, down, alpha=0.4, color='orange', marker='o', s= 5)
+        ax.scatter(jst, ma, alpha=0.4, color='red', marker='o', s= 5)
+        for i, entry in enumerate(entries):
+            if entry == 1:
+                color = 'green'
+            elif entry == -1:
+                color= 'red'
+            else:
+                continue
+            ax.vlines(jst[i], min(cl), max(cl), lw=2, linestyle='dotted', alpha=0.4, color=color)
         dirpath = './tmp/chart/'
         os.makedirs(dirpath, exist_ok=True)
         path = os.path.join(dirpath, f'chart_{title}.png')

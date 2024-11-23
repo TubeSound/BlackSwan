@@ -296,7 +296,7 @@ class TradeBot:
                         self.debug_print('<Closed Timeup> Fail', self.symbol, info.desc())                                      
         self.trade_manager.remove_positions(remove_tickets)
        
-    def close_positions(self, positions, siganl):   
+    def close_positions(self, positions, signal):   
         removed_tickets = []
         for ticket, position in positions.items():
             if position.signal() == signal:
@@ -372,7 +372,7 @@ def trade_param():
                   'begin_minute':0,
                   'hours': 24,
                   'sl': {'method': 1, 'value':50},
-                  'volume': 0.1,
+                  'volume': 0.02,
                   'position_max':5,
                   'trail_target':100, 
                   'trail_stop': 50,
