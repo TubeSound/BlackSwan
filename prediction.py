@@ -14,7 +14,7 @@ JST = tz.gettz('Asia/Tokyo')
 UTC = tz.gettz('utc')
 
 from common import Indicators, Columns, Signal
-from technical import PPP, SUPERTREND, SUPERTREND_SIGNAL, MA, detect_terms, is_nans
+from technical import PPP, SUPERTREND, SUPERTREND_SIGNAL, MA, detect_terms, is_nans, sma
 from strategy import Simulation
 from time_utils import TimeFilter, TimeUtils
 from data_loader import DataLoader
@@ -414,14 +414,14 @@ def test(symbol, timefram, strategy):
     
 def optimize(symbol, timefram, strategy):
     #making = MakeFeatures(symbol, timeframe)
-    dirpath = f'./optimize_2024/{strategy}/{symbol}/{timeframe}'
+    dirpath = f'./optimize_2020-2024/{strategy}/{symbol}/{timeframe}'
     os.makedirs(dirpath, exist_ok=True)
 
-    data0 = from_pickle(symbol, timeframe)
-    jst = data0[Columns.JST]
-    t1 = jst[-1]
-    t0 = t1 - timedelta(days=180)
-    n, data = TimeUtils.slice(data0, jst, t0, t1)   
+    data = from_pickle(symbol, timeframe)
+    #jst = data0[Columns.JST]
+    #t1 = jst[-1]
+    #t0 = t1 - timedelta(days=180)
+    #n, data = TimeUtils.slice(data0, jst, t0, t1)   
     jst = data[Columns.JST]
     print('Data length', len(jst), jst[0], jst[-1])
 
@@ -456,12 +456,13 @@ def optimize(symbol, timefram, strategy):
 def calc_drawdown(profit_data):
     time = profit_data[0]
     profits = profit_data[1]
+    ma = sma(profits, 10)
     n = len(time)
     drawdown = None
     t_drawdown = None
-    for i in range(1, n):
+    for i in range(10, n):
         for j in range(i + 1, n):
-            if profits[j] >= profits[i]:
+            if ma[j] >= ma[i]:
                 t = time[j] - time[i]
                 if t_drawdown is None:
                     t_drawdown = t
@@ -469,7 +470,7 @@ def calc_drawdown(profit_data):
                     if t > t_drawdown:
                         t_drawdown = t
                 break
-            d = profits[i + 1: j + 1]
+            d = ma[i + 1: j + 1]
             vmin = min(d)
             if drawdown is None:
                 drawdown = vmin
