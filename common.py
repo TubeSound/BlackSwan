@@ -27,6 +27,10 @@ class Columns:
     MID = 'mid'
     VOLUME = 'volume'
 
+class Signal:
+    LONG = 1
+    SHORT = -1    
+    
 class TimeFrame:
     TICK = 'TICK'
     M1 = 'M1'
@@ -132,7 +136,7 @@ class Indicators:
     PPP_DOWN = 'PPP_DOWN'
     
     MA_GOLDEN_CROSS = 'MA_GOLDEN_CROSS'
-
-class Signal:
-    LONG = 1
-    SHORT = -1    
+    
+    BREAKOUT = 'BREAKOUT'
+    BREAKOUT_ENYRY = 'BREAKOUT_ENTRY'
+    BREAKOUT_EXIT = 'BREAKOUT_EXIT' 

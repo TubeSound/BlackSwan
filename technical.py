@@ -1396,6 +1396,49 @@ def detect_trend_term(vector):
                 begin = None
     return long, short
 
+def breakout(data: dict, n_bo: int, width: int, term_max):
+    cl = data[Columns.CLOSE]
+    n = len(cl)
+    bo = np.full(n, 0)
+    flag = np.full(n, 0)
+    prices = np.full(n_bo, 0)
+    i = window - 1
+    while i < n:
+        d = cl[i - window + 1: i]
+        threshold = 0.5 *  (max(d) - min(d))
+        if cl[i] > max(d) + threshold:
+            prices[0] = cl[i]
+            count = 1
+            flag[i] = 1
+            bo[i] = 1
+            for j in range(i + 1, (i + term_max + 1) % n):
+                if cl[j] > prices[count - 1]:
+                    flag[j] = count + 1
+                    prices[count] = cl[j]
+                    count += 1
+                    if count > n_bo:
+                        break
+            i += term_max + 1
+        elif cl[i]  < min(d) - threshold:
+            prices[0] = cl[i]
+            count = 1
+            flag[i] = -1
+            bo[i] = -1
+            for j in range(i + 1, (i + term_max + 1) % n):
+                if cl[j] < prices[count - 1]:
+                    flag[j] = -1 * (count + 1)
+                    prices[count] = cl[j]
+                    count += 1
+                    if count > n_bo:
+                        break
+            i += term_max + 1
+        else:
+            i += 1
+    data[Indicators.BREAKOUT] = flag
+    
+    
+    
+    
 def diff(data: dict, column: str):
     signal = data[column]
     time = data[Columns.TIME]

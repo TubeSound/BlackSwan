@@ -229,7 +229,7 @@ def create_bot(symbol, timeframe):
     return bot
 
      
-def test():
+def bot():
     symbols = ['NIKKEI', 'DOW', 'NSDQ']
     bots = {}
     for i, symbol in enumerate(symbols):
@@ -245,5 +245,9 @@ def test():
             scheduler.enter(10, i + 1, bot.update)
         scheduler.run()
 
+def main() :
+    bot()
+    
+
 if __name__ == '__main__':
-    test()
+    main():
