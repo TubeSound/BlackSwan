@@ -361,6 +361,8 @@ def make_trade_param(symbol, randomize=False):
         k = 0.1
     elif symbol == 'NSDQ':
         k = 0.5
+    elif symbol == 'USDJPY':
+        k = 0.001
     else:
         k = 1.0
     
@@ -479,43 +481,13 @@ def calc_drawdown(profit_data):
                     drawdown = vmin
     return drawdown, t_drawdown
     
-    
-class Peak:
-    def __init__(self, is_maximum):
-        self.is_maximum = is_maximum
-        self.peak = None
-        self.values = None
-        
-    def update(self, value, values):
-        if self.peak is None:
-            self.peak = value
-            self.values = values
-            return True
-        else:
-            if self.is_maximum:
-                if value > self.peak:
-                    self.peak = value
-                    self.values = values
-                    return True
-            else:
-                if value < self.peak:
-                    self.peak = valule
-                    self.values = values
-                    return True
-        return False               
-                
-
-                    
-    
-    
-    
-    
-    
+ 
+   
     
 if __name__ == '__main__':
     args = sys.argv
     if len(args) != 4:
-        symbol = 'NIKKEI'
+        symbol = 'USDJPY'
         timeframe = 'M15'
         strategy = 'supertrend'
     else:        

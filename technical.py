@@ -1402,6 +1402,7 @@ def breakout(data: dict, n_bo: int, width: int, term_max):
     bo = np.full(n, 0)
     flag = np.full(n, 0)
     prices = np.full(n_bo, 0)
+    sl = np.full(n, np.nan)
     i = window - 1
     while i < n:
         d = cl[i - window + 1: i]
@@ -1414,6 +1415,7 @@ def breakout(data: dict, n_bo: int, width: int, term_max):
             for j in range(i + 1, (i + term_max + 1) % n):
                 if cl[j] > prices[count - 1]:
                     flag[j] = count + 1
+                    sl[j] = prices[0]
                     prices[count] = cl[j]
                     count += 1
                     if count > n_bo:
@@ -1427,6 +1429,7 @@ def breakout(data: dict, n_bo: int, width: int, term_max):
             for j in range(i + 1, (i + term_max + 1) % n):
                 if cl[j] < prices[count - 1]:
                     flag[j] = -1 * (count + 1)
+                    sl[j] = prices[0]
                     prices[count] = cl[j]
                     count += 1
                     if count > n_bo:
@@ -1435,6 +1438,27 @@ def breakout(data: dict, n_bo: int, width: int, term_max):
         else:
             i += 1
     data[Indicators.BREAKOUT] = flag
+    data[Indicators.BREAKOUT_SL] = sl
+    ent = np.full(n, 0)
+    for i in range(n):
+        if flag[i] == n_bo:
+            ent[i] = 1
+        elif flag[i] == -1 * n_bo:
+            ent[i] = -1
+    data[Indicators.BREAKOUT_ENTRY] = ent
+    ext = np.full(n, np.nan)
+    current = None
+    for i in range(n):
+        if ent[i] == 0:
+            continue
+        if current is None:
+            current = ent[i]
+        else:
+            if ent[i] != current:
+                ext[i] = 1
+                current = ent[i]    
+    data[Indicators.BREAKOUT_EXIT] = ext
+    
     
     
     
