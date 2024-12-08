@@ -14,7 +14,7 @@ JST = tz.gettz('Asia/Tokyo')
 UTC = tz.gettz('utc')
 
 from common import Indicators, Columns, Signal
-from technical import PPP, SUPERTREND, SUPERTREND_SIGNAL, MA, detect_terms, is_nans, sma
+from technical import PPP, SUPERTREND, SUPERTREND_SIGNAL, MA, detect_terms, is_nans, sma, breakout
 from strategy import Simulation
 from time_utils import TimeFilter, TimeUtils
 from data_loader import DataLoader
@@ -287,6 +287,13 @@ def trade_supertrend(symbol, timeframe, data, technical_param, trade_param):
     trade_num, profit, win_rate = summary
     return (df, summary, profit_curve)
 
+def trade_breakout(symbol, timeframe, data, technical_param, trade_param):
+    p = technical_param
+    breakout(data, p['n_bo'], p['window'], p['term_max'])
+    sim = Simulation(data, trade_param)        
+    df, summary, profit_curve = sim.run(data, Indicators.BREAKOUT_ENTRY, Indicators.BREAKOUT_EXIT)
+    trade_num, profit, win_rate = summary
+    return (df, summary, profit_curve)
 
 def make_technical_param_ppp(randomize=False):
     def gen3():
@@ -355,6 +362,22 @@ def make_technical_param_supertrend(randomize=False):
                 'short_term': term,
             }
     return param
+
+def make_technical_param_breakout(randomize=False):
+    if randomize:
+        n_bo = random.randint(2, 4)
+        window = random.randint(6, 12 * 8)
+        term_max = random.random(6, 12 * 24) 
+    else:
+       n_bo = 2
+       window = 12 * 2
+       term_max = 12 * 8
+    param = {  
+                'n_bo': n_bo, 
+                'window': window,
+                'term_max': term_max
+            }
+    return param
     
 def make_trade_param(symbol, randomize=False):
     if symbol == 'XAUUSD':
@@ -406,6 +429,9 @@ def test(symbol, timefram, strategy):
     if strategy.find('supertrend') >= 0:
         technical_param = make_technical_param_supertrend()
         result = trade_supertrend(symbol, timeframe, data, technical_param, trade_param)
+    elif strategy.find('breakout') >= 0:
+        technical_param = make_technical_param_breakout()
+        result = trade_breakout(symbol, timeframe, data, technical_param, trade_param)
     (df, summary, profit_curve) = result
     print(summary)
     df.to_csv(os.path.join(dirpath, 'trade_summary.csv'), index=False)
@@ -433,6 +459,10 @@ def optimize(symbol, timefram, strategy):
         if strategy.find('supertrend') >= 0:
             technical_param = make_technical_param_supertrend(randomize=True)
             result = trade_supertrend(symbol, timeframe, data, technical_param, trade_param)
+        elif strategy.find('breakout') >= 0:
+            technical_param = make_technical_param_breakout()
+            result = trade_breakout(symbol, timeframe, data, technical_param, trade_param)
+            
         (df, summary, profit_curve) = result
         trade_num, profit, win_rate = summary
         drawdown, t_drawdown = calc_drawdown(profit_curve)
@@ -487,9 +517,9 @@ def calc_drawdown(profit_data):
 if __name__ == '__main__':
     args = sys.argv
     if len(args) != 4:
-        symbol = 'USDJPY'
+        symbol = 'NIKKEI'
         timeframe = 'M15'
-        strategy = 'supertrend'
+        strategy = 'breakout'
     else:        
         symbol = args[1]
         timeframe = args[2]
