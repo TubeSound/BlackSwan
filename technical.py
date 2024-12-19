@@ -1461,7 +1461,7 @@ def breakout(data: dict, n_bo: int, window: int, term_max):
     
     
     
-def rally(data, short_term, mid_term, long_term, threshold, rate):
+def rally(data, short_term=12, mid_term=24, long_term=48, threshold=0.1, rate=o.7):
     cl = data[Columns.CLOSE]
     n = len(cl)
     ma1 = sma(cl, short_term)
