@@ -1461,16 +1461,45 @@ def breakout(data: dict, n_bo: int, window: int, term_max):
     
     
     
+def rally(data, short_term, mid_term, long_term, threshold, rate):
+    cl = data[Columns.CLOSE]
+    n = len(cl)
+    ma1 = sma(cl, short_term)
+    ma2 = sma(cl, mid_term)
+    ma3 = sma(cl, long_term)
+    d1 = diff(ma1)
+    d2 = diff(ma2)
+    d3 = diff(ma3)
+    w1 = np.array(ma1) - np.array(ma2)
+    w2 = np.array(ma2) - np.array(ma3)
+    r = np.abs(w1 / w2)
+    
+    c1 = (w1 > 0) and (w2 > 0)
+    c2 = (d1 > threshold) and (d2 > threshold) and (d3 > threshold)
+    c3 = (r > (1.0 - rate)) and (r < (1.0 + rate))
+    
+    sig = np.full(n, 0)
+    for i in range(n):
+        if c1[i] and c2[i] and c3[i]:
+            sig[i] = 1
+            
+    c1 = (w1 < 0) and (w2 < 0)
+    c2 = (d1 < threshold) and (d2 < threshold) and (d3 < threshold)
+    for i in range(n):
+        if c1[i] and c2[i] and c3[i]:
+            sig[i] = -1   
+            
+    data[Indicators.MA_SHORT] = ma1
+    data[Indicators.MA_MID] = ma2
+    data[Indicators.MA_LONG] = ma3
+    data[Indicators.RALLY] = sig 
     
     
-def diff(data: dict, column: str):
-    signal = data[column]
-    time = data[Columns.TIME]
-    n = len(signal)
-    out = nans(n)
+def diff(array):
+    n = len(array)
+    out = np.full(n, np.nan)
     for i in range(1, n):
-        dt = time[i] - time[i - 1]
-        out[i] = (signal[i] - signal[i - 1]) / signal[i - 1] / (dt.seconds / 60) * 100.0
+        out[i] = array[i] - array[i - 1]
     return out
 
 def detect_peaks(vector):
