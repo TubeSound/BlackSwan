@@ -14,7 +14,7 @@ JST = tz.gettz('Asia/Tokyo')
 UTC = tz.gettz('utc')
 
 from common import Indicators, Columns, Signal
-from technical import PPP, SUPERTREND, SUPERTREND_SIGNAL, MA, detect_terms, is_nans, sma, breakout
+from technical import PPP, SUPERTREND, SUPERTREND_SIGNAL, MA, detect_terms, is_nans, sma, breakout, rally
 from strategy import Simulation
 from time_utils import TimeFilter, TimeUtils
 from data_loader import DataLoader
@@ -295,6 +295,10 @@ def trade_breakout(symbol, timeframe, data, technical_param, trade_param):
     trade_num, profit, win_rate = summary
     return (df, summary, profit_curve)
 
+def trade_rally(symbol, timeframe, data, technical_param, trade_param):
+    rally(data)
+    
+
 def make_technical_param_ppp(randomize=False):
     def gen3():
         s = m = l = 0
@@ -386,6 +390,10 @@ def make_trade_param(symbol, randomize=False):
         k = 0.5
     elif symbol == 'USDJPY':
         k = 0.001
+    elif symbol == 'TSLA':
+        k = 0.01
+    elif symbol == 'NVDA':
+        k = 0.003
     else:
         k = 1.0
     
@@ -414,7 +422,7 @@ def make_trade_param(symbol, randomize=False):
                 'timelimit': 0}
     return param, k
  
-def test(symbol, timefram, strategy):
+def evaluate(symbol, timefram, strategy):
     #making = MakeFeatures(symbol, timeframe)
     dirpath = f'./test/{strategy}/{symbol}/{timeframe}'
     os.makedirs(dirpath, exist_ok=True)
@@ -439,6 +447,24 @@ def test(symbol, timefram, strategy):
     ax.plot(profit_curve[0], profit_curve[1])
     fig.savefig(os.path.join(dirpath, 'profit.png'))
     plot2(strategy, symbol, timeframe, data, df, dirpath)
+    
+def test(symbol, timefram, strategy):
+    #making = MakeFeatures(symbol, timeframe)
+    dirpath = f'./test/{strategy}/{symbol}/{timeframe}'
+    os.makedirs(dirpath, exist_ok=True)
+
+    data0 = from_pickle(symbol, timeframe)
+    jst = data0[Columns.JST]
+    t1 = jst[-1]
+    t0 = t1 - timedelta(days=30*6)
+    n, data = TimeUtils.slice(data0, jst, t0, t1)   
+    
+    trade_param, k = make_trade_param(symbol)
+    #if strategy.find('rally') >= 0:
+        
+       
+        
+        
     
 def optimize(symbol, timefram, strategy):
     #making = MakeFeatures(symbol, timeframe)
@@ -473,7 +499,7 @@ def optimize(symbol, timefram, strategy):
         out.append(d)
         
         print(i, summary)
-        if profit > 10000 * k:
+        if profit > 10000 * k * 5:
             fig, ax = plt.subplots(1, 1, figsize=(10, 4))
             ax.plot(profit_curve[0], profit_curve[1])
             fig.savefig(os.path.join(dirpath, f'{symbol}_{timeframe}_profit#{i}.png'))
@@ -517,9 +543,9 @@ def calc_drawdown(profit_data):
 if __name__ == '__main__':
     args = sys.argv
     if len(args) != 4:
-        symbol = 'NIKKEI'
+        symbol = 'NVDA'
         timeframe = 'M15'
-        strategy = 'breakout'
+        strategy = 'supertrend'
     else:        
         symbol = args[1]
         timeframe = args[2]

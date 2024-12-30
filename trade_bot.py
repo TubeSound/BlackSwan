@@ -1,6 +1,7 @@
 import os
 import sys
 sys.path.append('../Libraries/trade')
+import pickle
 
 import time
 import threading
@@ -16,6 +17,7 @@ from data_buffer import DataBuffer
 from time_utils import TimeUtils
 from utils import Utils
 from technical import SUPERTREND, SUPERTREND_SIGNAL
+from strategy import Simulation
 from common import Signal, Indicators
 
 JST = tz.gettz('Asia/Tokyo')
@@ -168,8 +170,29 @@ class TradeBot:
         self.server_timezone = tz
         print('SeverTime GMT+', dt, tz)
         
+        
+    def backup_path(self):
+        dir_path = f'./trade_backup/{self.symbol}/{self.timeframe}'
+        path = os.path.join(dir_path, f'{self.symbol}_{self.timeframe}_trade_manager.pkl')
+        return path, dir_path
+        
+    def load_trade_manager(self):
+        path, dir_path = self.backup_path()
+        try:
+            with open(path, 'rb') as f:
+                self.trade_manager = pickle.load(f)
+            print(self.symbol, self.timeframe, ' loaded Trade_manager positions num: ', len(self.trade_manager.positions))
+        except:
+            self.trade_manager = TradeManager(self.symbol, self.timeframe)
+            
+    def save_trade_manager(self):
+        path, dir_path = self.backup_path()
+        os.makedirs(dir_path, exist_ok=True)
+        with open(path, 'wb') as f:
+            pickle.dump(self.trade_manager, f)     
+            
     def run(self):
-        self.trade_manager = TradeManager(self.symbol, self.timeframe)
+        self.load_trade_manager()
         df = self.mt5.get_rates(self.timeframe, INITIAL_DATA_LENGTH)
         if len(df) < INITIAL_DATA_LENGTH:
             raise Exception('Error in initial data loading')
@@ -182,7 +205,7 @@ class TradeBot:
             #save(buffer.data, './debug/initial_' + self.symbol + '_' + datetime.now().strftime('%Y-%m-%d_%H_%M_%S') + '.xlsx')
             return True            
         else:
-            print('<マーケットクローズ>')
+            print(f'*マーケットクローズ: {self.symbol}')
             buffer = DataBuffer(self.calc_indicators, self.symbol, self.timeframe, df, self.technical_param, self.delta_hour_from_gmt)
             self.buffer = buffer
             return False
@@ -216,6 +239,7 @@ class TradeBot:
                     df.to_excel('./debug/trade_summary.xlsx', index=False)
                 except:
                     pass
+            self.save_trade_manager()
         return n
     
             
@@ -231,7 +255,7 @@ class TradeBot:
     def entry(self, data, signal, index, time):
         volume = self.trade_param['volume']
         sl = self.trade_param['sl']['value']
-        target_profit = self.trade_param['trail_target']
+        target_profit = self.trade_param['target_profit']
         trailing_stop = self.trade_param['trail_stop']          
         timelimit = self.trade_param['timelimit']                       
         position_max = int(self.trade_param['position_max'])
@@ -258,7 +282,7 @@ class TradeBot:
         
     def trailing(self):
         trailing_stop = self.trade_param['trail_stop'] 
-        target_profit = self.trade_param['trail_target']
+        target_profit = self.trade_param['target_profit']
         if trailing_stop == 0 or target_profit == 0:
             return
         remove_tickets = []
@@ -331,6 +355,11 @@ def technical_param(symbol):
         param['atr_multiply'] = 3.2
         param['ma_window'] = 93
         param['short_term'] = 34
+    elif symbol == 'TSLA':
+        param['atr_window'] = 82
+        param['atr_multiply'] = 0.90
+        param['ma_window'] = 37
+        param['short_term'] = 6
     return param
 
 def trade_param(symbol):
@@ -350,7 +379,11 @@ def trade_param(symbol):
         sl = 20
         target_profit = 30
         trail_stop = 20
-    
+    elif symbol == 'TSLA':
+        sl = 4
+        target_profit = 0
+        trail_stop = 1
+        
     param =  {
                 'strategy': 'supertrend',
                 'begin_hour': 0,
@@ -358,36 +391,37 @@ def trade_param(symbol):
                 'hours': 0,
                 'sl': {
                         'method': Simulation.SL_FIX,
-                        'value': int(sl * k)
+                        'value': sl
                     },
-                'target_profit': int(target_profit * k),
-                'trail_stop': int(trail_stop * k), 
+                'target_profit': target_profit,
+                'trail_stop': trail_stop, 
                 'volume': 0.1, 
-                'position_max': 10, 
+                'position_max': 5, 
                 'timelimit': 0}
-    return param, k
+    return param
 
+"""
 def trade_param():
    param = {'begin_hour':8, 
                   'begin_minute':0,
                   'hours': 24,
                   'sl': {'method': 1, 'value':50},
-                  'volume': 0.02,
+                  'volume': 0.1,
                   'position_max':5,
                   'trail_target':100, 
                   'trail_stop': 50,
                   'timelimit':0}
    return param        
+"""
 
 def create_bot(symbol, timeframe):
-    bot = TradeBot(symbol, timeframe, 1, Indicators.SUPERTREND_ENTRY, Indicators.SUPERTREND_EXIT, technical_param(symbol), trade_param())    
+    bot = TradeBot(symbol, timeframe, 1, Indicators.SUPERTREND_ENTRY, Indicators.SUPERTREND_EXIT, technical_param(symbol), trade_param(symbol))    
     bot.set_sever_time(3, 2, 11, 1, 3.0)
     return bot
 
-
      
 def test():
-    symbols = ['DOW', 'NIKKEI', 'NSDQ', 'XAUUSD']
+    symbols = ['DOW', 'NIKKEI', 'NSDQ', 'XAUUSD', 'TSLA']
     bots = {}
     for i, symbol in enumerate(symbols):
         bot = create_bot(symbol, 'M15')
