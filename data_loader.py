@@ -57,7 +57,8 @@ class DataLoader:
             filepath = self.data_filepath(symbol, timeframe, year, month)
             if filepath is not None:
                 df = pd.read_csv(filepath)
-                dfs.append(df)
+                if len(df) > 0:
+                    dfs.append(df)
             if year == to_year and month == to_month:
                 break
             month += 1
@@ -66,7 +67,7 @@ class DataLoader:
                 month = 1
                 
         if len(dfs) == 0:
-            return 0
+            return 0, {}
         df = pd.concat(dfs, ignore_index=True)
         n = len(df)
         dic = {}
