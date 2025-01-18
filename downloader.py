@@ -30,9 +30,9 @@ def download(symbols, save_holder):
     api = Mt5Api()
     api.connect()
     for symbol in symbols:
-        for tf in [TimeFrame.M5, TimeFrame.M15, TimeFrame.M30, TimeFrame.H1, TimeFrame.H4, TimeFrame.D1]:#, TimeFrame.M1]:
-            for year in range(2025, 2026):
-                for month in range(1, 2):
+        for tf in [TimeFrame.M5, TimeFrame.M15, TimeFrame.M30, TimeFrame.H1, TimeFrame.H4, TimeFrame.D1, TimeFrame.M1]:
+            for year in range(2020, 2026):
+                for month in range(1, 13):
                     t0 = datetime(year, month, 1, 7)
                     t0 = t0.replace(tzinfo=JST)
                     t1 = t0 + relativedelta(months=1) - timedelta(seconds=1)
@@ -89,11 +89,15 @@ def save(filepath, obj):
 def save_data():
     year_from = 2020
     month_from = 1
-    year_to = 2024
-    month_to = 12
+    year_to = 2025
+    month_to = 1
     loader = DataLoader()
     for symbol in all_symbols():
-        for tf in ['M5', 'M15', 'M30', 'H1', 'H4']:
+        if symbol in ['NIKKEI', 'NSDQ']:
+            tfs = ['M1', 'M5', 'M15' 'M30', 'H1', 'H4', 'D1']
+        else:
+            tfs = ['M15' 'M30', 'H1', 'H4', 'D1']
+        for tf in tfs:
             n, data = loader.load_data(symbol, tf, year_from, month_from, year_to, month_to)
             os.makedirs('./data', exist_ok=True)
             save('./data/Axiory/' + symbol + '_' + tf + ".pkl", data)

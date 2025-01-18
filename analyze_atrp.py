@@ -179,7 +179,7 @@ def main5():
 
     dic = {}
     html = None
-    for year in range(2008, 2025):
+    for year in range(2020, 2026):
         for symbol, d in data.items():
             t0 = datetime(year, 1, 1).astimezone(JST)
             t1 = datetime(year, 12, 31).astimezone(JST)
@@ -203,6 +203,8 @@ def plot_atrp(dic, signals, year, symbol, timeframe, t0, t1):
     fig, axes = gridFig([5, 3], (20, 12))
     i = 0
     for symb, data in dic.items():
+        if data is None:
+            continue
         jst = data['jst']
         cl = data['close']
         atrp = data['ATRP']
