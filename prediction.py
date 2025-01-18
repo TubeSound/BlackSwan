@@ -384,16 +384,32 @@ def make_technical_param_breakout(randomize=False):
     return param
     
 def make_trade_param(symbol, randomize=False):
+    begin_hour = 0
+    begin_minute = 0
+    hours = 0
     if symbol == 'XAUUSD':
         k = 0.1
+    if symbol == 'XAGUSD':
+        k = 0.001
+    elif symbol == 'XPDUSD':
+        k = 0.005
+    elif symbol == 'CL':
+        k = 0.002
     elif symbol == 'NSDQ':
         k = 0.5
     elif symbol == 'USDJPY':
         k = 0.001
     elif symbol == 'TSLA':
         k = 0.01
+        begin_hour = 11
+        begin_minute = 30
+        hours = 7
     elif symbol == 'NVDA':
         k = 0.003
+    elif symbol == 'DAX':
+        k = 0.5
+    elif symbol == 'HK50':
+        k = 0.5
     else:
         k = 1.0
     
@@ -408,9 +424,9 @@ def make_trade_param(symbol, randomize=False):
     
     param =  {
                 'strategy': 'supertrend',
-                'begin_hour': 0,
-                'begin_minute': 0,
-                'hours': 0,
+                'begin_hour': begin_hour,
+                'begin_minute': begin_minute,
+                'hours': hours,
                 'sl': {
                         'method': Simulation.SL_FIX,
                         'value': int(sl * k)
@@ -418,7 +434,7 @@ def make_trade_param(symbol, randomize=False):
                 'target_profit': int(target_profit * k),
                 'trail_stop': int(trail_stop * k), 
                 'volume': 0.1, 
-                'position_max': 10, 
+                'position_max':2, 
                 'timelimit': 0}
     return param, k
  
@@ -499,11 +515,12 @@ def optimize(symbol, timefram, strategy):
         out.append(d)
         
         print(i, summary)
-        if profit > 10000 * k * 5:
+        if profit > 10000 * k * 10:
             fig, ax = plt.subplots(1, 1, figsize=(10, 4))
             ax.plot(profit_curve[0], profit_curve[1])
             fig.savefig(os.path.join(dirpath, f'{symbol}_{timeframe}_profit#{i}.png'))
-     
+            plt.close()
+    
         try:
             columns = ['no'] + columns1 + columns2 + ['trade_num', 'profit', 'win_rate', 'drawdown', 't_drawdown']
             df = pd.DataFrame(data=out, columns=columns)
@@ -543,7 +560,7 @@ def calc_drawdown(profit_data):
 if __name__ == '__main__':
     args = sys.argv
     if len(args) != 4:
-        symbol = 'NVDA'
+        symbol = 'HK50'
         timeframe = 'M15'
         strategy = 'supertrend'
     else:        

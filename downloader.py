@@ -22,17 +22,18 @@ UTC = tz.gettz('utc')
 
 def all_symbols():
     symbols = ['NIKKEI', 'DOW', 'NSDQ', 'SP', 'HK50', 'DAX', 'FTSE', 'XAUUSD']
-    symbols += ['CL', 'USDJPY', 'GBPJPY']
-    #symbols += ['HK50', 'NGAS', 'EURJPY', 'AUDJPY', 'EURUSD']
+    symbols += ['USDJPY', 'GBPJPY', 'NVDA', 'TSLA']
+    symbols += ['CL', 'NGAS', 'XAGUSD', 'XPDUSD', 'XPTUSD']
+    symbols = ['NSDQ']
     return symbols
 
 def download(symbols, save_holder):
     api = Mt5Api()
     api.connect()
     for symbol in symbols:
-        for tf in [TimeFrame.M5, TimeFrame.M15, TimeFrame.M30, TimeFrame.H1, TimeFrame.H4, TimeFrame.D1]: #TimeFrame.M1, 
-            for year in range(2024, 2025):
-                for month in range(10, 12):
+        for tf in [TimeFrame.M5, TimeFrame.M15, TimeFrame.M30, TimeFrame.H1, TimeFrame.H4, TimeFrame.D1, TimeFrame.M1]:
+            for year in range(2025, 2026):
+                for month in range(1, 2):
                     t0 = datetime(year, month, 1, 7)
                     t0 = t0.replace(tzinfo=JST)
                     t1 = t0 + relativedelta(months=1) - timedelta(seconds=1)
@@ -90,7 +91,7 @@ def save_data():
     year_from = 2020
     month_from = 1
     year_to = 2024
-    month_to = 11
+    month_to = 12
     loader = DataLoader()
     for symbol in all_symbols():
         for tf in ['M5', 'M15', 'M30', 'H1', 'H4']:

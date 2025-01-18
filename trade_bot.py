@@ -89,7 +89,7 @@ class TradeManager:
         
     def summary(self):
         out = []
-        for ticket, pos in self.positions_closed.items():
+        for ticket, pos in list(self.positions.items()) + list(self.positions_closed.items()):
             d, columns = pos.array()
             out.append(d)
         df = pd.DataFrame(data=out, columns=columns)
@@ -172,7 +172,7 @@ class TradeBot:
         
         
     def backup_path(self):
-        dir_path = f'./trade_backup/{self.symbol}/{self.timeframe}'
+        dir_path = f'./trading/tmp/{self.symbol}/{self.timeframe}'
         path = os.path.join(dir_path, f'{self.symbol}_{self.timeframe}_trade_manager.pkl')
         return path, dir_path
         
@@ -235,8 +235,10 @@ class TradeBot:
             if record:
                 try:
                     df = self.trade_manager.summary()
-                    os.makedirs('./debug')
-                    df.to_excel('./debug/trade_summary.xlsx', index=False)
+                    dir_path = f'./trading/summary/{self.symbol}/{self.timeframe}'
+                    os.makedirs(dir_path, exist_ok=True)
+                    path = os.path.join(dir_path, f'{self.symbol}_{self.timeframe}_trade_summary.xlsx')
+                    df.to_excel(path, index=False)
                 except:
                     pass
             self.save_trade_manager()
@@ -331,7 +333,19 @@ class TradeBot:
                 else:
                     self.debug_print('<Closed> Fail', self.symbol, position.desc())           
         self.trade_manager.remove_positions(removed_tickets)
-        
+    
+    
+"""
+だめだったやつ
+DOW 2025.01.01
+  elif symbol == 'DOW':
+        param['atr_window'] = 79
+        param['atr_multiply'] = 2.4
+        param['ma_window'] = 38
+        param['short_term'] = 17
+
+"""
+    
         
 def technical_param(symbol):
     param = {}
@@ -341,10 +355,10 @@ def technical_param(symbol):
         param['ma_window'] = 48
         param['short_term'] = 11
     elif symbol == 'DOW':
-        param['atr_window'] = 79
-        param['atr_multiply'] = 2.4
-        param['ma_window'] = 38
-        param['short_term'] = 17
+        param['atr_window'] = 51
+        param['atr_multiply'] = 2.0
+        param['ma_window'] = 24
+        param['short_term'] = 12
     elif symbol == 'NSDQ':
         param['atr_window'] = 29
         param['atr_multiply'] = 1.5
@@ -355,6 +369,21 @@ def technical_param(symbol):
         param['atr_multiply'] = 3.2
         param['ma_window'] = 93
         param['short_term'] = 34
+    elif symbol == 'XPDUSD':
+        param['atr_window'] = 66
+        param['atr_multiply'] = 3.52
+        param['ma_window'] = 36
+        param['short_term'] = 9
+    elif symbol == 'XAGUSD':
+        param['atr_window'] = 10
+        param['atr_multiply'] = 2.0
+        param['ma_window'] = 57
+        param['short_term'] = 27
+    elif symbol == 'NVDA':
+        param['atr_window'] = 77
+        param['atr_multiply'] = 3.05
+        param['ma_window'] = 53
+        param['short_term'] = 10
     elif symbol == 'TSLA':
         param['atr_window'] = 82
         param['atr_multiply'] = 0.90
@@ -363,26 +392,46 @@ def technical_param(symbol):
     return param
 
 def trade_param(symbol):
+    volume =0.1
     if symbol == 'NIKKEI':
-        sl = 500
+        sl = 150 #500
         target_profit = 100
-        trail_stop = 100
+        trail_stop = 50
+        volume = 0.2
     elif symbol == 'DOW':
         sl = 150
         target_profit = 400
         trail_stop = 200
+        volume = 0.02
     elif symbol == 'NSDQ':
         sl = 100
         target_profit = 250
         trail_stop = 50
+        volume = 0.2
     elif symbol == 'XAUUSD':
         sl = 20
         target_profit = 30
         trail_stop = 20
+        volume = 0.2
+    elif symbol == 'XPDUSD':
+        sl = 1
+        target_profit = 2
+        trail_stop = 0.5
+    elif symbol == 'XAGUSD':
+        sl = 0.1
+        target_profit = 0.4
+        trail_stop = 0.1
+        volume = 0.02
+    elif symbol == 'NVDA':
+        sl = 1
+        target_profit = 0
+        trail_stop = 0
+        volume = 0.1
     elif symbol == 'TSLA':
         sl = 4
         target_profit = 0
         trail_stop = 1
+        volume = 2
         
     param =  {
                 'strategy': 'supertrend',
@@ -395,7 +444,7 @@ def trade_param(symbol):
                     },
                 'target_profit': target_profit,
                 'trail_stop': trail_stop, 
-                'volume': 0.1, 
+                'volume': volume, 
                 'position_max': 5, 
                 'timelimit': 0}
     return param
@@ -421,7 +470,7 @@ def create_bot(symbol, timeframe):
 
      
 def test():
-    symbols = ['DOW', 'NIKKEI', 'NSDQ', 'XAUUSD', 'TSLA']
+    symbols = ['DOW', 'NIKKEI', 'NSDQ', 'XAUUSD', 'XPDUSD', 'XAGUSD', 'NVDA'] #, 'TSLA']
     bots = {}
     for i, symbol in enumerate(symbols):
         bot = create_bot(symbol, 'M15')
