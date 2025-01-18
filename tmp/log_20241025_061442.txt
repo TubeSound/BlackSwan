@@ -1,7 +1,0 @@
-SeverTime GMT+ 3:00:00 UTC+03:00
-Connected to MT5 Version (500, 4620, '11 Oct 2024')
-SeverTime GMT+ 3:00:00 UTC+03:00
-JST*2024-10-25_01:55:11 (ServerTime:2024-10-24_19:55:11) <Entry Signal:>  -1
-エントリー  {'action': 1, 'symbol': 'DOW', 'volume': 0.1, 'type': 1, 'price': 42324.6, 'deviation': 20, 'magic': 234000, 'comment': 'python script open', 'type_time': 0, 'type_filling': 1, 'sl': 42424.6}
-JST*2024-10-25_01:55:12 (ServerTime:2024-10-24_19:55:12) <Entry> signal <bound method PositionInfo.signal of <mt5_trade.PositionInfo object at 0x000001F93F597130>> DOW 530 2024-10-24 16:50:00+00:00
-<Closed by Meta Trader Stoploss or Takeprofit>  DOW tickets: [29738479]
