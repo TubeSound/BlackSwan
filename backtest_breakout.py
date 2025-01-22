@@ -89,48 +89,66 @@ def search_reverse(time, index, tref):
             return i
     return -1
 
-def detect_breakout(time, value, term_minutes, is_up):
+def explosion(time, value, term_minutes):
+    STATE_NONE = 0
+    STATE_UP = 1
+    STATE_DOWN = -1
+    
+    state = STATE_NONE
     n = len(time)
     sig = np.full(n, 0)
+    bo = np.full(n, 0)
     i0 = 0
     t = time[i0] + timedelta(minutes=term_minutes)
     i1 = search(time, 0, t)
     if i1 < 0:
         return sig
-    peak = None
+    vmax = None
+    vmin = None
     while i1 < n:
-        if peak is None:
-            d = value[i0: i1]
-            brk = False
-            if is_up:
-                if value[i1] > max(d):
+        d = value[i0: i1]
+        brk_new = False
+        if state == STATE_NONE:
+            if value[i1] > max(d):
                     sig[i1] = 1
-                    peak = value[i1]
-                    i1 += 1
-                    brk = True
-            else:
-                if value[i1] < min(d):
+                    bo[i1] = 1
+                    vmax = value[i1]
+                    state = STATE_UP
+                    brk_new = True
+            elif value[i1] < min(d):
                     sig[i1] = -1
-                    peak = value[i1]
-                    i1 += 1
-                    brk = True
-            if not brk:
-                i1 += 1
-                t = time[i1] - timedelta(minutes=term_minutes)
-                i0 = search_reverse(time, i1, t)
-                if i0 < 0:
-                    i0 = 0
-        else:
-            if is_up:
-                if value[i1] > peak:
-                    sig[i1] = 1
-                    peak = value[i1]
-            else:
-                if value[i1] < peak:
-                    sig[i1] = -1
-                    peak = value[i1]
-            i1 += 1
-    return sig
+                    bo[i1] = -1
+                    vmin= value[i1]
+                    state = STATE_DOWN
+                    brk_new = True
+
+        elif state == STATE_UP:
+            if value[i1] < min(d):
+                sig[i1] = -1
+                bo[i1] = -1
+                vmin = value[i1]
+                state = STATE_DOWN
+                brk_new = True
+            elif value[i1] > vmax:
+                bo[i1] = 1
+                vmax = value[i1]
+        elif state == STATE_DOWN:
+            if value[i1] > max(d):
+                sig[i1] = 1
+                bo[i1] = 1
+                vmax = value[i1]
+                state = STATE_UP
+                brk_new = True
+            elif value[i1] < vmin:
+                bo[i1] = -1
+                vmin = value[i1]
+        i1 += 1
+        if i1 >= n:
+            break
+        if not brk_new:
+            t = time[i1] - timedelta(minutes=term_minutes)
+            i0 = search_reverse(time, i1, t)
+    return sig, bo
 
 def majority(vector, term, rate):
     n = len(vector)
@@ -144,21 +162,6 @@ def majority(vector, term, rate):
             else:
                 out[i] = -1
     return out
-
-
-def explosion(time, price, term_minutes, filter_term, filter_rate):
-    up0 = detect_breakout(time, price, term_minutes, True)
-    up = majority(up0, filter_term, filter_rate)
-    down0 = detect_breakout(time, price, term_minutes, False)
-    down = majority(down0, filter_term, filter_rate)
-    n = len(time)
-    bo = np.full(n, 0)
-    for i in range(n):
-        if up[i] == 1:
-            bo[i] = 1
-        elif down[i] == -1:
-            bo[i] = -1
-    return bo, up0, down0
  
 def separate(array, signal, values):
     n = len(array)
@@ -189,17 +192,15 @@ def evaluate(symbol, strategy, hours=4):
         if n > 10:
             time = data['jst']
             price = data['ask']
-            bo, up, down = explosion(time, price, 60, 5, 0.8)
-            norm, boup, bodown = separate(price, bo, [0, 1, -1])
+            sig, bo = explosion(time, price, 60)
+            norm, up, down = separate(price, bo, [0, 1, -1])
             fig, ax = plt.subplots(1, 1, figsize=(20, 10))
             ax.scatter(time, norm, color='blue', alpha=0.01, s=5)
-            ax.scatter(time, boup, color='green', alpha=0.2, s=50)
-            ax.scatter(time, bodown, color='red', alpha=0.2, s=50)
+            ax.scatter(time, up, color='green', alpha=0.2, s=50)
+            ax.scatter(time, down, color='red', alpha=0.2, s=50)
             ax2 = ax.twinx()
-            #ax.plot(time, bo, color='orange', alpha=0.5)
+            ax2.plot(time, bo, color='orange', alpha=0.5)
             ax2.set_ylim(-2, 2)
-            ax2.plot(time, up, color='green', alpha=0.5)
-            ax2.plot(time, down, color='red', alpha=0.5)
             fig.savefig(os.path.join(dirpath, f"#{count}.png"))
             plt.close()
             count += 1
