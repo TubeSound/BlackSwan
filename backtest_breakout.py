@@ -189,7 +189,7 @@ def separate(array, signal, values):
         out.append(a)
     return out
  
-def evaluate(symbol, strategy, hours=24):
+def evaluate(symbol, strategy, hours=12):
     dirpath = f'./debug/{symbol}'
     os.makedirs(dirpath, exist_ok=True)
     data0 = from_pickle(symbol)
@@ -206,6 +206,7 @@ def evaluate(symbol, strategy, hours=24):
         n, data = TimeUtils.slice(data0, jst, t0, t1)
         if n > 10:
             time = data['timestamp']
+            jst = data['jst']
             price = data['ask']
             sig, bo = explosion(time, price, 30)
             norm, up, down = separate(price, bo, [0, 1, -1])
@@ -213,12 +214,12 @@ def evaluate(symbol, strategy, hours=24):
             entry = slice_data(prob, 10)
             
             fig, ax = plt.subplots(1, 1, figsize=(20, 10))
-            ax.scatter(time, norm, color='blue', alpha=0.01, s=5)
-            ax.scatter(time, up, color='green', alpha=0.1, s=20)
-            ax.scatter(time, down, color='red', alpha=0.1, s=20)
+            ax.scatter(jst, norm, color='blue', alpha=0.01, s=5)
+            ax.scatter(jst, up, color='green', alpha=0.1, s=20)
+            ax.scatter(jst, down, color='red', alpha=0.1, s=20)
             ax2 = ax.twinx()
-            ax2.plot(time, prob, color='orange', alpha=0.5)
-            ax2.plot(time, np.array(entry) * 10, color='red', alpha=0.5)
+            ax2.plot(jst, prob, color='orange', alpha=0.5)
+            ax2.plot(jst, np.array(entry) * 10, color='red', alpha=0.5)
             ax2.set_ylim(-50, 50)
             fig.savefig(os.path.join(dirpath, f"#{count}.png"))
             plt.close()
