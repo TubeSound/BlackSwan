@@ -26,6 +26,7 @@ class Columns:
     BID = 'bid'
     MID = 'mid'
     VOLUME = 'volume'
+    TIMESTAMP = 'timestamp'
 
 class Signal:
     LONG = 1
