@@ -397,22 +397,22 @@ def trade_param(symbol):
         sl = 150 #500
         target_profit = 100
         trail_stop = 50
-        volume = 0.2
+        volume = 0.1
     elif symbol == 'DOW':
         sl = 150
         target_profit = 400
         trail_stop = 200
-        volume = 0.02
+        volume = 0.1
     elif symbol == 'NSDQ':
-        sl = 100
-        target_profit = 250
+        sl = 50
+        target_profit = 50
         trail_stop = 50
-        volume = 0.2
+        volume = 0.1
     elif symbol == 'XAUUSD':
         sl = 20
         target_profit = 30
         trail_stop = 20
-        volume = 0.2
+        volume = 0.05
     elif symbol == 'XPDUSD':
         sl = 1
         target_profit = 2
@@ -421,7 +421,7 @@ def trade_param(symbol):
         sl = 0.1
         target_profit = 0.4
         trail_stop = 0.1
-        volume = 0.02
+        volume = 0.05
     elif symbol == 'NVDA':
         sl = 1
         target_profit = 0
@@ -470,7 +470,7 @@ def create_bot(symbol, timeframe):
 
      
 def test():
-    symbols = ['DOW', 'NIKKEI', 'NSDQ', 'XAUUSD', 'XPDUSD', 'XAGUSD', 'NVDA'] #, 'TSLA']
+    symbols = ['DOW', 'NIKKEI', 'NSDQ'] #, 'XAUUSD', 'XPDUSD', 'XAGUSD'] #, 'NVDA'] #, 'TSLA']
     bots = {}
     for i, symbol in enumerate(symbols):
         bot = create_bot(symbol, 'M15')

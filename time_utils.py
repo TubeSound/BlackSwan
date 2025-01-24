@@ -173,7 +173,8 @@ class TimeUtils:
             return (0, None, None)
         
     @staticmethod
-    def slice(dic, time, time_from, time_to):
+    def slice(dic, time_column, time_from, time_to):
+        time = dic[time_column]
         n, begin, end = TimeUtils.sliceTime(time, time_from, time_to)
         if n == 0:
             return n, None

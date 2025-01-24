@@ -87,6 +87,26 @@ def search_reverse(time, index, tref):
             return i
     return -1
 
+def search_head(time, minutes):
+    i = search(time, 0, time[0] + 60 * minutes)
+    return i
+
+
+def range_minutes(time, array, minutes):
+    n = len(time)
+    rng = np.full(n, 0)
+    counts = np.full(n, 0)
+    i0 = 0
+    i1 = search_head(time, minutes)
+    if i1 < 0:
+        return rng, counts
+    for i in range(i1, n):
+        i0 = search_reverse(time, i1, time[i1] - 60 * minutes)
+        d = array[i0: i1 + 1]
+        rng[i] = max(d) - min(d)
+        counts[i] = len(d)
+    return rng, counts
+
 def explosion(time, value, term_minutes):
     STATE_NONE = 0
     STATE_UP = 1
@@ -151,21 +171,41 @@ def explosion(time, value, term_minutes):
 def probability(time, vector, term_minutes):
     n = len(vector)
     out = np.full(n, 0)
-    i1 = 1
-    i0 = -1
-    while i0 < 0:
-        i0 = search_reverse(time, i1, time[i1] - 60 * term_minutes)
-        i1 += 1
+    i0 = 0
+    i1 = search_head(time, term_minutes)
     while True:
         d = vector[i0: i1 + 1]
-        mean = sum(d) / len(d)
         out[i1] = sum(d)
         i1 += 1
-        if i1 >= n:
+        if i1 > n - 1:
             break
-        i0 = search_reverse(time, i1, time[i1] - 60 * term_minutes)
+        index = -1
+        for i in range(i0, i1):
+            t = time[i1] - 60 * term_minutes
+            if time[i] > t:
+                index = i
+                break
+        i0 = i1 if index < 0 else index
     return out
 
+def make_signal(values, threshold):
+    array = slice_data(values, threshold)
+    n = len(array)
+    entry = np.full(n, 0)
+    ext  = np.full(n, 0)
+    state = 0
+    for i in range(n):
+        if state == 0:
+            if array[i] != 0:
+                entry[i] = array[i]
+                state = array[i]
+        else:
+            ext[i] = 1
+            if array[i] != 0:
+                entry[i] = array[i]
+                state = array[i]
+    return entry, ext
+    
 def slice_data(array, value):
     n = len(array)
     out = np.full(n, 0)
@@ -189,12 +229,13 @@ def separate(array, signal, values):
         out.append(a)
     return out
  
-def evaluate(symbol, strategy, hours=12):
+def evaluate(symbol, strategy, hours=6):
     dirpath = f'./debug/{symbol}'
     os.makedirs(dirpath, exist_ok=True)
     data0 = from_pickle(symbol)
-    jst = data0[Columns.JST]
-    tbegin = jst[0]
+    jst0 = data0[Columns.JST]
+    tbegin = jst0[0]
+    tend = jst0[-1]
     year = tbegin.year
     month = tbegin.month
     day = tbegin.day
@@ -202,25 +243,40 @@ def evaluate(symbol, strategy, hours=12):
     t0 = datetime(year, month, day).astimezone(JST)
     t1 = t0 + timedelta(hours=hours)
     count = 0
-    while t1 < jst[-1]:
-        n, data = TimeUtils.slice(data0, jst, t0, t1)
+    while t1 < tend:
+        n, data = TimeUtils.slice(data0, 'jst', t0, t1)
         if n > 10:
             time = data['timestamp']
             jst = data['jst']
             price = data['ask']
+            rng, counts = range_minutes(time, price, 5)
             sig, bo = explosion(time, price, 30)
             norm, up, down = separate(price, bo, [0, 1, -1])
             prob = probability(time, bo, 15)
-            entry = slice_data(prob, 10)
+            entry, ext = make_signal(prob, 10)
             
-            fig, ax = plt.subplots(1, 1, figsize=(20, 10))
-            ax.scatter(jst, norm, color='blue', alpha=0.01, s=5)
-            ax.scatter(jst, up, color='green', alpha=0.1, s=20)
-            ax.scatter(jst, down, color='red', alpha=0.1, s=20)
-            ax2 = ax.twinx()
-            ax2.plot(jst, prob, color='orange', alpha=0.5)
-            ax2.plot(jst, np.array(entry) * 10, color='red', alpha=0.5)
-            ax2.set_ylim(-50, 50)
+            fig, axes = plt.subplots(2, 1, figsize=(20, 10))
+            axes[0].scatter(jst, norm, color='blue', alpha=0.01, s=5)
+            axes[0].scatter(jst, up, color='green', alpha=0.1, s=20)
+            axes[0].scatter(jst, down, color='red', alpha=0.1, s=20)
+            ax0 = axes[0].twinx()
+            ax0.plot(jst, prob, color='orange', alpha=0.5)
+            ax0.plot(jst, np.array(bo) * 10, color='red', alpha=0.5)
+            for i, e in enumerate(entry):
+                if e != 0:
+                    if e > 0:
+                        color = 'green'
+                        marker = '^'
+                    else:
+                        color = 'red'
+                        marker = 'v'
+                    axes[0].scatter(jst[i], price[i], color=color, marker=marker, s=200, alpha=0.5)
+            for i, e in enumerate(entry):
+                if e != 0:
+                    axes[0].scatter(jst[i], price[i], color='gray', marker='X', s=400, alpha=0.5)
+            
+            axes[1].plot(jst, rng, color='red', alpha=0.5)
+            axes[1].plot(jst, counts, color='blue', alpha=0.5)
             fig.savefig(os.path.join(dirpath, f"#{count}.png"))
             plt.close()
             count += 1

@@ -1,5 +1,7 @@
 
 import MetaTrader5 as mt5
+import os
+import time
 import pandas as pd
 from dateutil import tz
 from datetime import datetime, timedelta, timezone
@@ -94,6 +96,7 @@ class Mt5Api:
         t_to = utc_to_server_time(utc_to)
         ticks = mt5.copy_ticks_range(symbol, t_from, t_to, mt5.COPY_TICKS_ALL)
         df = pd.DataFrame(ticks)
+        print('Data size',  len(df))
         # 秒での時間をdatetime形式に変換する
         t0 = pd.to_datetime(df['time'], unit='s')
         tmsec = [t % 1000 for t in df['time_msc']]
@@ -108,6 +111,23 @@ class Mt5Api:
         df['jst'] = jst
         df['time'] = utc
         return df
+
+    def get_ticks_from(self, symbol, jst_from, length):
+        utc_from = jst_from.astimezone(tz=UTC)
+        t_from = utc_to_server_time(utc_from)
+        ticks = mt5.copy_ticks_from(symbol, t_from, length, mt5.COPY_TICKS_ALL)
+        df = pd.DataFrame(ticks)
+        print('Data size',  len(df))
+        # 秒での時間をdatetime形式に変換する
+        t0 = pd.to_datetime(df['time'], unit='s')
+        tmsec = [t % 1000 for t in df['time_msc']]
+        utc, jst = adjust(t0)
+        utc = [t + timedelta(milliseconds=msec) for t, msec in zip(utc, tmsec)]
+        jst = [t + timedelta(milliseconds=msec) for t, msec in zip(jst, tmsec)]
+        df['jst'] = jst
+        df['time'] = utc
+        return df
+
 
 
     def parse_rates(self, rates):
@@ -128,11 +148,16 @@ class Mt5Api:
 
 
 def test1():
-    symbol = 'NIKKEI'
+    symbol = 'NSDQ'
+    dirpath = f'./tmp/tickdata/{symbol}'
+    os.makedirs(dirpath, exist_ok=True)
+    
     mt5api = Mt5Api()
-    dic = mt5api.get_rates(symbol, 'M1', 100)
-    jst = dic['jst']
-    print(jst[10:])
+    tfrom = datetime(2025, 1, 25, 1, 34).astimezone(JST)
+    for i in range(10):
+        df = mt5api.get_ticks_from(symbol, tfrom, 1000000)
+        df.to_csv(f'{dirpath}/{i}.csv', index=False)
+        time.sleep(1)
 
     pass
 
