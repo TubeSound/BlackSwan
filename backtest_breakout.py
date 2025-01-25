@@ -56,7 +56,7 @@ def expand(name: str, dic: dict):
     return data, columns 
 
 def from_pickle(symbol):
-    filepath = f'./data/Axiory/tick/{symbol}_TICK_2025_01_15.pkl'
+    filepath = f'./data/Axiory/tick/{symbol}_TICK_2025_01_10.pkl'
     with open(filepath, 'rb') as f:
         data0 = pickle.load(f)
         jst = list(data0['jst'])
@@ -100,11 +100,19 @@ def range_minutes(time, array, minutes):
     i1 = search_head(time, minutes)
     if i1 < 0:
         return rng, counts
-    for i in range(i1, n):
-        i0 = search_reverse(time, i1, time[i1] - 60 * minutes)
+    while True:
         d = array[i0: i1 + 1]
-        rng[i] = max(d) - min(d)
-        counts[i] = len(d)
+        rng[i1] = max(d) - min(d)
+        counts[i1] = len(d)
+        i1 += 1
+        if i1 > n - 1:
+            break
+        index = -1
+        for i in range(i0, i1):
+            if time[i] > time[i1] - 60 * minutes:
+                index = i
+                break
+        i0 = i1 if index < 0 else index        
     return rng, counts
 
 def explosion(time, value, term_minutes):
@@ -193,18 +201,31 @@ def make_signal(values, threshold):
     n = len(array)
     entry = np.full(n, 0)
     ext  = np.full(n, 0)
+    sig = np.full(n, np.nan)
     state = 0
     for i in range(n):
         if state == 0:
             if array[i] != 0:
                 entry[i] = array[i]
-                state = array[i]
-        else:
-            ext[i] = 1
-            if array[i] != 0:
-                entry[i] = array[i]
-                state = array[i]
-    return entry, ext
+                sig[i] = array[i]
+        elif state == 1:
+            if array[i] == 0:
+                ext[i] = 1
+                sig[i] = 0
+            elif array[i] == -1:
+                ext[i] = 1
+                entry[i] = -1
+                sig[i] = -1
+        elif state == -1:
+            if array[i] == 0:
+                ext[i] = 1
+                sig[i] = 0
+            elif array[i] == 1:
+                entry[i] = 1
+                ext[i] = 1
+                sig[i] = 1
+        state = array[i]
+    return entry, ext, sig
     
 def slice_data(array, value):
     n = len(array)
@@ -253,7 +274,7 @@ def evaluate(symbol, strategy, hours=6):
             sig, bo = explosion(time, price, 30)
             norm, up, down = separate(price, bo, [0, 1, -1])
             prob = probability(time, bo, 15)
-            entry, ext = make_signal(prob, 10)
+            entry, ext, sig = make_signal(prob, 10)
             
             fig, axes = plt.subplots(2, 1, figsize=(20, 10))
             axes[0].scatter(jst, norm, color='blue', alpha=0.01, s=5)
@@ -261,7 +282,8 @@ def evaluate(symbol, strategy, hours=6):
             axes[0].scatter(jst, down, color='red', alpha=0.1, s=20)
             ax0 = axes[0].twinx()
             ax0.plot(jst, prob, color='orange', alpha=0.5)
-            ax0.plot(jst, np.array(bo) * 10, color='red', alpha=0.5)
+            ax0.plot(jst, np.array(bo) * 10, color='yellow', alpha=.7)
+            ax0.plot(jst, np.array(sig) * 10, color='red', alpha=0.5)
             for i, e in enumerate(entry):
                 if e != 0:
                     if e > 0:
@@ -271,12 +293,18 @@ def evaluate(symbol, strategy, hours=6):
                         color = 'red'
                         marker = 'v'
                     axes[0].scatter(jst[i], price[i], color=color, marker=marker, s=200, alpha=0.5)
-            for i, e in enumerate(entry):
+                    axes[0].vlines(jst[i], ymin=min(price), ymax=max(price), color=color, alpha=0.5)
+            for i, e in enumerate(ext):
                 if e != 0:
-                    axes[0].scatter(jst[i], price[i], color='gray', marker='X', s=400, alpha=0.5)
-            
-            axes[1].plot(jst, rng, color='red', alpha=0.5)
-            axes[1].plot(jst, counts, color='blue', alpha=0.5)
+                    axes[0].scatter(jst[i], price[i], color='gray', marker='X', s=200, alpha=0.5)
+                    axes[0].vlines(jst[i], ymin=min(price), ymax=max(price), color='black', alpha=0.8)  
+            axes[1].plot(jst, rng, color='red', alpha=0.5, label='Range')
+            ax1 = axes[1].twinx()
+            ax1.plot(jst, counts, color='blue', alpha=0.5, label='Counts')
+            ax1.legend()
+            ax1.set_ylabel('Counts')
+            axes[1].legend()
+            axes[1].set_ylabel('Range')
             fig.savefig(os.path.join(dirpath, f"#{count}.png"))
             plt.close()
             count += 1
