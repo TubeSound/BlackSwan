@@ -56,7 +56,7 @@ def expand(name: str, dic: dict):
     return data, columns 
 
 def from_pickle(symbol):
-    filepath = f'./data/Axiory/tick/{symbol}_TICK_2025_01_10.pkl'
+    filepath = f'./data/Axiory/tick/{symbol}_TICK_2025_01.pkl'
     with open(filepath, 'rb') as f:
         data0 = pickle.load(f)
         jst = list(data0['jst'])
@@ -122,7 +122,6 @@ def explosion(time, value, term_minutes):
     
     state = STATE_NONE
     n = len(time)
-    sig = np.full(n, 0)
     bo = np.full(n, 0)
     i0 = 0
     t = time[i0] + 60 * term_minutes
@@ -136,21 +135,17 @@ def explosion(time, value, term_minutes):
         brk_new = False
         if state == STATE_NONE:
             if value[i1] > max(d):
-                    sig[i1] = 1
                     bo[i1] = 1
                     vmax = value[i1]
                     state = STATE_UP
                     brk_new = True
             elif value[i1] < min(d):
-                    sig[i1] = -1
                     bo[i1] = -1
                     vmin= value[i1]
                     state = STATE_DOWN
                     brk_new = True
-
         elif state == STATE_UP:
             if value[i1] < min(d):
-                sig[i1] = -1
                 bo[i1] = -1
                 vmin = value[i1]
                 state = STATE_DOWN
@@ -160,7 +155,6 @@ def explosion(time, value, term_minutes):
                 vmax = value[i1]
         elif state == STATE_DOWN:
             if value[i1] > max(d):
-                sig[i1] = 1
                 bo[i1] = 1
                 vmax = value[i1]
                 state = STATE_UP
@@ -174,7 +168,7 @@ def explosion(time, value, term_minutes):
         if not brk_new:
             t = time[i1] - 60 * term_minutes
             i0 = search_reverse(time, i1, t)
-    return sig, bo
+    return bo
 
 def probability(time, vector, term_minutes):
     n = len(vector)
@@ -250,11 +244,83 @@ def separate(array, signal, values):
         out.append(a)
     return out
  
-def evaluate(symbol, strategy, hours=6):
+ 
+def evaluate(time, price, signal, sl):
+    def search_exit(index):
+        n = len(time)
+        for i in range(index, n):
+                if signal[i] == 0:
+                    return i
+        return -1
+    
+    positions = []
+    n = len(time)
+    i = 0
+    s = 0
+    times = []
+    profits = []
+    while i < n:
+        if signal[i] == 1 or signal[i] == -1:
+            j = search_exit(i + 1)
+            if j < 0:
+                break
+            p0 = price[i + 1]
+            p1 = price[j + 1]
+            if signal[i] == 1:
+                vmin = min(price[i + 1: j + 2])
+                if vmin < p0 - sl:
+                    profit = sl
+                else:
+                    profit = p1 - p0
+            elif signal[i] == -1:
+                vmax = max(price[i + 1: j + 2])
+                if vmax > p0 + sl:
+                    profit = -sl
+                else:
+                    profit = p0 - p1
+            s += profit        
+            times.append(time[j + 1])
+            profits.append(s)
+            positions.append([signal[i], time[i + 1], price[i + 1], time[j + 1], price[j + 1], profit])
+            i = j + 2
+        else:
+            i += 1
+    return (times, profits), positions, s
+
+def simulate(symbol, strategy, hours=6):
     dirpath = f'./debug/{symbol}'
     os.makedirs(dirpath, exist_ok=True)
     data0 = from_pickle(symbol)
     jst0 = data0[Columns.JST]
+    time = data0['timestamp']
+    price = data0['ask']
+    rng, counts = range_minutes(time, price, 5)
+    bo = explosion(time, price, 30)
+    norm, up, down = separate(price, bo, [0, 1, -1])
+    prob = probability(time, bo, 15)
+    entry, ext, sig = make_signal(prob, 10)
+    profits, positions, s = evaluate(jst0, price, sig, 100)
+    print('Toal profit:', s)
+    print(type(profits[0][0]))
+
+    fig, ax = plt.subplots(1, 1, figsize=(20, 10))
+    ax.plot(profits[0], profits[1], color='red', alpha=0.5)
+    ax1 = ax.twinx()
+    ax1.scatter(jst0, price, color='blue', alpha=0.01)
+    fig.savefig(os.path.join(dirpath, 'profits.png'))
+
+    df = pd.DataFrame(positions, columns=['signal', 'entry_time', 'entry_price', 'exit_time', 'exit_price', 'profit'])
+    df.to_csv(os.path.join(dirpath, 'positions.csv'), index=False)
+    
+    
+    data0['breakout'] = bo
+    data0['range'] = rng
+    data0['counts'] = counts
+    data0['prob'] = prob
+    data0['entry'] = entry
+    data0['exit'] = ext
+    data0['signal'] = sig  
+    
     tbegin = jst0[0]
     tend = jst0[-1]
     year = tbegin.year
@@ -270,12 +336,15 @@ def evaluate(symbol, strategy, hours=6):
             time = data['timestamp']
             jst = data['jst']
             price = data['ask']
-            rng, counts = range_minutes(time, price, 5)
-            sig, bo = explosion(time, price, 30)
+            bo = data['breakout']
+            signal = data['signal']
+            prob = data['prob']
+            entry = data['entry']
+            ext = data['exit']
+            rng = data['range']
+            counts = data['counts']
             norm, up, down = separate(price, bo, [0, 1, -1])
-            prob = probability(time, bo, 15)
-            entry, ext, sig = make_signal(prob, 10)
-            
+            #evaluate(time, price, entry, ext, rng, counts)    
             fig, axes = plt.subplots(2, 1, figsize=(20, 10))
             axes[0].scatter(jst, norm, color='blue', alpha=0.01, s=5)
             axes[0].scatter(jst, up, color='green', alpha=0.1, s=20)
@@ -283,7 +352,7 @@ def evaluate(symbol, strategy, hours=6):
             ax0 = axes[0].twinx()
             ax0.plot(jst, prob, color='orange', alpha=0.5)
             ax0.plot(jst, np.array(bo) * 10, color='yellow', alpha=.7)
-            ax0.plot(jst, np.array(sig) * 10, color='red', alpha=0.5)
+            ax0.plot(jst, np.array(signal) * 10, color='red', alpha=0.5)
             for i, e in enumerate(entry):
                 if e != 0:
                     if e > 0:
@@ -314,10 +383,10 @@ def evaluate(symbol, strategy, hours=6):
 if __name__ == '__main__':
     args = sys.argv
     if len(args) != 3:
-        symbol = 'NSDQ'
+        symbol = 'NIKKEI'
         strategy = 'breakout'
     else:        
         symbol = args[1]
         strategy = args[2]
     print(symbol, strategy)
-    evaluate(symbol, strategy)
+    simulate(symbol, strategy)
