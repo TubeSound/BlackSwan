@@ -244,9 +244,46 @@ def separate(array, signal, values):
         out.append(a)
     return out
  
+def trailing(signal, price, sl, trail_target, trail_stop):
+    n = len(signal)
+    SL = 1
+    TRAIL_STOP = 2
+    TIME_END = 0
+    fired = False
+    position_max = None
+    for i in range(n):
+        if signal == 1:
+            profit = price[i] - price[0]
+            if profit < -sl:
+                return(i, -sl, SL)
+        elif signal == -1:
+            profit = price[0] - price[i]
+            if profit < -sl:
+                return(i, -sl, SL)
+        if trail_target == 0 or trail_stop == 0:
+            continue
+        if signal == 1:
+            profit = price[i] - price[0]
+        elif signal == -1:
+            profit = price[0] - price[i]
+        if fired:
+            if profit > profit_max:
+                profit_max = profit
+            elif (profit - profit_max) < -trail_stop:
+                return(i, -trail_stop, TRAIL_STOP)
+        else:
+            if profit >= trail_target:
+                fired = True
+                profit_max = profit
+    if signal == 1:
+        profit = price[n - 1] - price[0]
+    elif signal == -1:
+        profit = price[0] - price[n - 1]
+    return (n - 1, profit, TIME_END)
+    
  
-def evaluate(time, price, signal, sl):
-    def search_exit(index):
+def evaluate(time, price, signal, sl, trail_target, trail_stop):
+    def search_exit(index): 
         n = len(time)
         for i in range(index, n):
                 if signal[i] == 0:
@@ -264,24 +301,12 @@ def evaluate(time, price, signal, sl):
             j = search_exit(i + 1)
             if j < 0:
                 break
-            p0 = price[i + 1]
-            p1 = price[j + 1]
-            if signal[i] == 1:
-                vmin = min(price[i + 1: j + 2])
-                if vmin < p0 - sl:
-                    profit = sl
-                else:
-                    profit = p1 - p0
-            elif signal[i] == -1:
-                vmax = max(price[i + 1: j + 2])
-                if vmax > p0 + sl:
-                    profit = -sl
-                else:
-                    profit = p0 - p1
+            index, profit, reason = trailing(signal[i], price[i + 1: j + 2], sl, trail_target, trail_stop)
+            index += i + 1
             s += profit        
             times.append(time[j + 1])
             profits.append(s)
-            positions.append([signal[i], time[i + 1], price[i + 1], time[j + 1], price[j + 1], profit])
+            positions.append([signal[i], time[i + 1], price[i + 1], time[j + 1], price[j + 1], profit, reason])
             i = j + 2
         else:
             i += 1
@@ -383,7 +408,7 @@ def simulate(symbol, strategy, hours=6):
 if __name__ == '__main__':
     args = sys.argv
     if len(args) != 3:
-        symbol = 'NIKKEI'
+        symbol = 'DOW'
         strategy = 'breakout'
     else:        
         symbol = args[1]
