@@ -245,7 +245,7 @@ def separate(array, signal, values):
     return out
  
 def trailing(signal, price, sl, trail_target, trail_stop):
-    n = len(signal)
+    n = len(price)
     SL = 1
     TRAIL_STOP = 2
     TIME_END = 0
@@ -258,6 +258,7 @@ def trailing(signal, price, sl, trail_target, trail_stop):
                 return(i, -sl, SL)
         elif signal == -1:
             profit = price[0] - price[i]
+            print(profit, sl)
             if profit < -sl:
                 return(i, -sl, SL)
         if trail_target == 0 or trail_stop == 0:
@@ -282,7 +283,10 @@ def trailing(signal, price, sl, trail_target, trail_stop):
     return (n - 1, profit, TIME_END)
     
  
-def evaluate(time, price, signal, sl, trail_target, trail_stop):
+def evaluate(time, price, signal, trade_param):
+    sl = trade_param['sl'],
+    trail_target = trade_param['trail_target']
+    trail_stop = trade_param['trail_stop']
     def search_exit(index): 
         n = len(time)
         for i in range(index, n):
@@ -312,31 +316,50 @@ def evaluate(time, price, signal, sl, trail_target, trail_stop):
             i += 1
     return (times, profits), positions, s
 
-def simulate(symbol, strategy, hours=6):
-    dirpath = f'./debug/{symbol}'
-    os.makedirs(dirpath, exist_ok=True)
-    data0 = from_pickle(symbol)
+def entries(time, positions):
+    out = []
+    tbegin = time[0]
+    tend = time[-1]
+    for p in positions:
+        signal, t0, p0, t1, p1, profit, reason = p
+        if t0 >= tbegin and t0 <= tend and t1 >= tbegin and t1 <= tend:
+            i0 = search(time, 0, t0)
+            if i0 < 0:
+                continue
+            i1 = search(time, i0, t1)
+            if i1 < 0:
+                continue
+            out.append((signal, i0, i1, profit, reason))
+    return out
+
+def simulate(optimize, number, symbol, dirpath, data0, technical_param, trade_param, hours=6):
+    breskout_minutes = technical_param['breakout_minutes']
+    prob_minutes = technical_param['prob_minutes']
+    prob_threshold = technical_param['prob_threshold']
     jst0 = data0[Columns.JST]
     time = data0['timestamp']
     price = data0['ask']
     rng, counts = range_minutes(time, price, 5)
-    bo = explosion(time, price, 30)
+    bo = explosion(time, price, breskout_minutes)
     norm, up, down = separate(price, bo, [0, 1, -1])
-    prob = probability(time, bo, 15)
-    entry, ext, sig = make_signal(prob, 10)
-    profits, positions, s = evaluate(jst0, price, sig, 100)
+    prob = probability(time, bo, prob_minutes)
+    entry, ext, sig = make_signal(prob, prob_threshold)
+    profits, positions, s = evaluate(jst0, price, sig, trade_param)
     print('Toal profit:', s)
     print(type(profits[0][0]))
 
-    fig, ax = plt.subplots(1, 1, figsize=(20, 10))
-    ax.plot(profits[0], profits[1], color='red', alpha=0.5)
-    ax1 = ax.twinx()
-    ax1.scatter(jst0, price, color='blue', alpha=0.01)
-    fig.savefig(os.path.join(dirpath, 'profits.png'))
+    if optimize and s > 700:
+        fig, ax = plt.subplots(1, 1, figsize=(20, 10))
+        ax.plot(profits[0], profits[1], color='red', alpha=0.5)
+        ax1 = ax.twinx()
+        ax1.scatter(jst0, price, color='blue', alpha=0.01)
+        fig.savefig(os.path.join(dirpath, f'{number}_profits.png'))
 
-    df = pd.DataFrame(positions, columns=['signal', 'entry_time', 'entry_price', 'exit_time', 'exit_price', 'profit'])
-    df.to_csv(os.path.join(dirpath, 'positions.csv'), index=False)
+        df = pd.DataFrame(positions, columns=['signal', 'entry_time', 'entry_price', 'exit_time', 'exit_price', 'profit'])
+        df.to_csv(os.path.join(dirpath, f'{number}_positions.csv'), index=False)
     
+    if optimize:
+        return s
     
     data0['breakout'] = bo
     data0['range'] = rng
@@ -378,20 +401,23 @@ def simulate(symbol, strategy, hours=6):
             ax0.plot(jst, prob, color='orange', alpha=0.5)
             ax0.plot(jst, np.array(bo) * 10, color='yellow', alpha=.7)
             ax0.plot(jst, np.array(signal) * 10, color='red', alpha=0.5)
-            for i, e in enumerate(entry):
-                if e != 0:
-                    if e > 0:
-                        color = 'green'
-                        marker = '^'
-                    else:
-                        color = 'red'
-                        marker = 'v'
-                    axes[0].scatter(jst[i], price[i], color=color, marker=marker, s=200, alpha=0.5)
-                    axes[0].vlines(jst[i], ymin=min(price), ymax=max(price), color=color, alpha=0.5)
-            for i, e in enumerate(ext):
-                if e != 0:
-                    axes[0].scatter(jst[i], price[i], color='gray', marker='X', s=200, alpha=0.5)
-                    axes[0].vlines(jst[i], ymin=min(price), ymax=max(price), color='black', alpha=0.8)  
+            for sig, i0, i1, profit, reason in entries(jst, positions):
+                if sig == 1:
+                    color = 'green'
+                    marker = '^'
+                    value = max(price)
+                else:
+                    color = 'red'
+                    marker = 'v'
+                    value = min(price)
+                axes[0].scatter(jst[i0], price[i0], color=color, marker=marker, s=200, alpha=0.5)
+                axes[0].scatter(jst[i1], price[i1], color='gray', marker='X', s=200, alpha=0.5)
+                axes[0].vlines(jst[i1], ymin=min(price), ymax=max(price), color='black', alpha=0.8)
+                if profit > 0:
+                    color = 'green'
+                else:
+                    color = 'red'
+                axes[0].text(jst[i1], value, f'{profit:.2f}', color=color)  
             axes[1].plot(jst, rng, color='red', alpha=0.5, label='Range')
             ax1 = axes[1].twinx()
             ax1.plot(jst, counts, color='blue', alpha=0.5, label='Counts')
@@ -404,14 +430,46 @@ def simulate(symbol, strategy, hours=6):
             count += 1
         t0 = t1
         t1 = t0 + timedelta(hours=hours)
+        
+def make_technical_param(randomize=True):
+    if randomize:
+        breakout_minutes = 5 * random.randint(2, 20)
+        prob_minutes = 2 * random.randint(1, 30)
+        prob_threshold = 5 * random.randint(1, 10)
+    else:
+        breakout_minutes = 30
+        prob_minutes = 30
+        prob_threshold = 5
+    return {'breakout_minutes': breakout_minutes, 'prob_minutes': prob_minutes, 'prob_threshold': prob_threshold}
+
+def make_trade_param(randomize=True):
+    if randomize:
+        sl = 5 * random.randint(1, 100)
+        trail_target = 5 * random.randint(1, 100)
+        trail_stop = 5 * random.randint(1, 100)
+    else:
+        sl = 30
+        trail_target = 50
+        trail_stop = 20
+    return {'sl': sl, 'trail_target': trail_target, 'trail_stop': trail_stop}
+
+def optimize(symbol, id, repeat=1000):
+    dirpath = f'./optimize/breakout_tick/{symbol}/{id}'
+    os.makedirs(dirpath, exist_ok=True)
+    data0 = from_pickle(symbol)
+    for i in range(repeat):
+        technical_param = make_technical_param()
+        trade_param = make_trade_param()
+        simulate(True, i, symbol, dirpath, data0.copy(), technical_param, trade_param)
+    
 
 if __name__ == '__main__':
     args = sys.argv
-    if len(args) != 3:
-        symbol = 'DOW'
-        strategy = 'breakout'
-    else:        
+    if len(args) == 3:    
         symbol = args[1]
-        strategy = args[2]
-    print(symbol, strategy)
-    simulate(symbol, strategy)
+        id = args[2]
+    else:
+        symbol = 'NIKKEI'
+        id = 'a'
+    print(symbol)
+    optimize(symbol, id)

@@ -61,7 +61,7 @@ class BlackSwanBot():
         self.symbols = symbols
         self.timeframe = timeframe
         self.invterval_seconds = interval_seconds
-        self.notify = LineNotify('BlackSwan') 
+        self.notify = LineNotify() 
         self.delta_hour_from_gmt = None
         self.server_timezone = None
         self.page = 0
