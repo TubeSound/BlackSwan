@@ -258,7 +258,6 @@ def trailing(signal, price, sl, trail_target, trail_stop):
                 return(i, -sl, SL)
         elif signal == -1:
             profit = price[0] - price[i]
-            print(profit, sl)
             if profit < -sl:
                 return(i, -sl, SL)
         if trail_target == 0 or trail_stop == 0:
@@ -284,7 +283,7 @@ def trailing(signal, price, sl, trail_target, trail_stop):
     
  
 def evaluate(time, price, signal, trade_param):
-    sl = trade_param['sl'],
+    sl = trade_param['sl']
     trail_target = trade_param['trail_target']
     trail_stop = trade_param['trail_stop']
     def search_exit(index): 
@@ -345,17 +344,16 @@ def simulate(optimize, number, symbol, dirpath, data0, technical_param, trade_pa
     prob = probability(time, bo, prob_minutes)
     entry, ext, sig = make_signal(prob, prob_threshold)
     profits, positions, s = evaluate(jst0, price, sig, trade_param)
-    print('Toal profit:', s)
-    print(type(profits[0][0]))
+    print('#', number, 'profit:', s)
 
-    if optimize and s > 700:
+    if optimize and s > 300:
         fig, ax = plt.subplots(1, 1, figsize=(20, 10))
         ax.plot(profits[0], profits[1], color='red', alpha=0.5)
         ax1 = ax.twinx()
         ax1.scatter(jst0, price, color='blue', alpha=0.01)
         fig.savefig(os.path.join(dirpath, f'{number}_profits.png'))
 
-        df = pd.DataFrame(positions, columns=['signal', 'entry_time', 'entry_price', 'exit_time', 'exit_price', 'profit'])
+        df = pd.DataFrame(positions, columns=['signal', 'entry_time', 'entry_price', 'exit_time', 'exit_price', 'profit', 'reason'])
         df.to_csv(os.path.join(dirpath, f'{number}_positions.csv'), index=False)
     
     if optimize:
@@ -457,11 +455,19 @@ def optimize(symbol, id, repeat=1000):
     dirpath = f'./optimize/breakout_tick/{symbol}/{id}'
     os.makedirs(dirpath, exist_ok=True)
     data0 = from_pickle(symbol)
+    out = []
     for i in range(repeat):
         technical_param = make_technical_param()
         trade_param = make_trade_param()
-        simulate(True, i, symbol, dirpath, data0.copy(), technical_param, trade_param)
-    
+        s = simulate(True, i, symbol, dirpath, data0.copy(), technical_param, trade_param)
+        p1, columns1 = expand('p1', technical_param)
+        p2, columns2 = expand('p2', trade_param)
+        out.append([i] + p1 + p2 + [s])
+        try:
+            df = pd.DataFrame(out, columns=['id'] + columns1 + columns2 + ['profit'])
+            df.to_csv(os.path.join(dirpath, 'optimize.csv'), index=False)
+        except:
+            pass
 
 if __name__ == '__main__':
     args = sys.argv
