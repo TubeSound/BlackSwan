@@ -56,7 +56,7 @@ def expand(name: str, dic: dict):
     return data, columns 
 
 def from_pickle(symbol):
-    filepath = f'./data/Axiory/tick/{symbol}_TICK_2025_01.pkl'
+    filepath = f'./data/Axiory/tick/{symbol}_TICK_2024_12.pkl'
     with open(filepath, 'rb') as f:
         data0 = pickle.load(f)
         jst = list(data0['jst'])
@@ -64,6 +64,7 @@ def from_pickle(symbol):
         ask = list(data0['ask'])
         timestamp = [t.timestamp() for t in jst]
         dic = {Columns.JST: jst, Columns.TIMESTAMP: timestamp, Columns.BID: bid, Columns.ASK: ask}
+        print(symbol, 'data from ', jst[0], 'to',  jst[-1])
         return dic        
     return None
 
@@ -255,11 +256,11 @@ def trailing(signal, price, sl, trail_target, trail_stop):
         if signal == 1:
             profit = price[i] - price[0]
             if profit < -sl:
-                return(i, -sl, SL)
+                return(i, profit, SL)
         elif signal == -1:
             profit = price[0] - price[i]
             if profit < -sl:
-                return(i, -sl, SL)
+                return(i, profit, SL)
         if trail_target == 0 or trail_stop == 0:
             continue
         if signal == 1:
@@ -270,7 +271,7 @@ def trailing(signal, price, sl, trail_target, trail_stop):
             if profit > profit_max:
                 profit_max = profit
             elif (profit - profit_max) < -trail_stop:
-                return(i, -trail_stop, TRAIL_STOP)
+                return(i, profit, TRAIL_STOP)
         else:
             if profit >= trail_target:
                 fired = True
@@ -338,7 +339,7 @@ def simulate(optimize, number, symbol, dirpath, data0, technical_param, trade_pa
     jst0 = data0[Columns.JST]
     time = data0['timestamp']
     price = data0['ask']
-    rng, counts = range_minutes(time, price, 5)
+    rng, counts = range_minutes(time, price, 60)
     bo = explosion(time, price, breskout_minutes)
     norm, up, down = separate(price, bo, [0, 1, -1])
     prob = probability(time, bo, prob_minutes)
@@ -346,13 +347,18 @@ def simulate(optimize, number, symbol, dirpath, data0, technical_param, trade_pa
     profits, positions, s = evaluate(jst0, price, sig, trade_param)
     print('#', number, 'profit:', s)
 
-    if optimize and s > 300:
-        fig, ax = plt.subplots(1, 1, figsize=(20, 10))
-        ax.plot(profits[0], profits[1], color='red', alpha=0.5)
-        ax1 = ax.twinx()
-        ax1.scatter(jst0, price, color='blue', alpha=0.01)
+    if (optimize and s > 300) or (not optimize):
+        fig, axes = plt.subplots(2, 1, figsize=(20, 10))
+        axes[0].plot(profits[0], profits[1], color='red', alpha=0.5)
+        ax0 = axes[0].twinx()
+        ax0.scatter(jst0, price, color='blue', alpha=0.01)
+        axes[1].plot(jst0, rng, color='blue', alpha=0.5, label='Range')
+        ax1 = axes[1].twinx()
+        ax1.plot(jst0, counts, color='red', alpha=0.5, label='Counts')
+        ax1.legend()
+        ax0.legend()
+        [ax.legend() for ax in axes]
         fig.savefig(os.path.join(dirpath, f'{number}_profits.png'))
-
         df = pd.DataFrame(positions, columns=['signal', 'entry_time', 'entry_price', 'exit_time', 'exit_price', 'profit', 'reason'])
         df.to_csv(os.path.join(dirpath, f'{number}_positions.csv'), index=False)
     
@@ -410,12 +416,15 @@ def simulate(optimize, number, symbol, dirpath, data0, technical_param, trade_pa
                     value = min(price)
                 axes[0].scatter(jst[i0], price[i0], color=color, marker=marker, s=200, alpha=0.5)
                 axes[0].scatter(jst[i1], price[i1], color='gray', marker='X', s=200, alpha=0.5)
-                axes[0].vlines(jst[i1], ymin=min(price), ymax=max(price), color='black', alpha=0.8)
+                #axes[0].vlines(jst[i1], ymin=min(price), ymax=max(price), color='black', alpha=0.8)
                 if profit > 0:
                     color = 'green'
                 else:
                     color = 'red'
                 axes[0].text(jst[i1], value, f'{profit:.2f}', color=color)  
+            for i, v in enumerate(ext):
+                if v == 1:
+                    axes[0].vlines(jst[i], ymin=min(price), ymax=max(price), color='black', alpha=0.5)
             axes[1].plot(jst, rng, color='red', alpha=0.5, label='Range')
             ax1 = axes[1].twinx()
             ax1.plot(jst, counts, color='blue', alpha=0.5, label='Counts')
@@ -452,7 +461,7 @@ def make_trade_param(randomize=True):
     return {'sl': sl, 'trail_target': trail_target, 'trail_stop': trail_stop}
 
 def optimize(symbol, id, repeat=1000):
-    dirpath = f'./optimize/breakout_tick/{symbol}/{id}'
+    dirpath = f'./optimize/breakout_tick_2024.12/{symbol}/{id}'
     os.makedirs(dirpath, exist_ok=True)
     data0 = from_pickle(symbol)
     out = []
