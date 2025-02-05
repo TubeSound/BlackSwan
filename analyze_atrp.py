@@ -183,7 +183,7 @@ def main5():
         for symbol, d in data.items():
             t0 = datetime(year, 1, 1).astimezone(JST)
             t1 = datetime(year, 12, 31).astimezone(JST)
-            n, d1 = TimeUtils.slice(d, d['jst'], t0, t1)
+            n, d1 = TimeUtils.slice(d, 'jst', t0, t1)
             dic[symbol] = d1
             signals = []
         header, fotter, image = plot_atrp(dic, signals, year, 'NIKKEI', timeframe, t0, t1)

@@ -350,20 +350,20 @@ DOW 2025.01.01
 def technical_param(symbol):
     param = {}
     if symbol == 'NIKKEI':
-        param['atr_window'] = 29
-        param['atr_multiply'] = 2.7
-        param['ma_window'] = 48
-        param['short_term'] = 11
+        param['atr_window'] = 51
+        param['atr_multiply'] = 1.3
+        param['ma_window'] = 35
+        param['short_term'] = 8
     elif symbol == 'DOW':
         param['atr_window'] = 51
         param['atr_multiply'] = 2.0
         param['ma_window'] = 24
         param['short_term'] = 12
     elif symbol == 'NSDQ':
-        param['atr_window'] = 29
-        param['atr_multiply'] = 1.5
-        param['ma_window'] = 14
-        param['short_term'] = 13
+        param['atr_window'] = 85
+        param['atr_multiply'] = 1.13
+        param['ma_window'] = 19
+        param['short_term'] = 4
     elif symbol == 'XAUUSD':
         param['atr_window'] = 21
         param['atr_multiply'] = 3.2
@@ -392,22 +392,22 @@ def technical_param(symbol):
     return param
 
 def trade_param(symbol):
-    volume =0.1
+    volume =0.05
     if symbol == 'NIKKEI':
-        sl = 150 #500
-        target_profit = 100
-        trail_stop = 50
-        volume = 0.1
+        sl = 200 #500
+        target_profit = 400
+        trail_stop = 250
+        #volume = 0.1
     elif symbol == 'DOW':
         sl = 150
         target_profit = 400
         trail_stop = 200
-        volume = 0.1
+        #volume = 0.1
     elif symbol == 'NSDQ':
         sl = 50
-        target_profit = 50
+        target_profit = 200
         trail_stop = 50
-        volume = 0.1
+        #volume = 0.1
     elif symbol == 'XAUUSD':
         sl = 20
         target_profit = 30
@@ -426,7 +426,7 @@ def trade_param(symbol):
         sl = 1
         target_profit = 0
         trail_stop = 0
-        volume = 0.1
+        #volume = 0.1
     elif symbol == 'TSLA':
         sl = 4
         target_profit = 0
