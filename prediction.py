@@ -527,6 +527,67 @@ def optimize(symbol, timefram, strategy):
             df.to_csv(os.path.join(dirpath, 'trade_summary.csv'), index=False)
         except:
             continue
+        
+        
+def select_top(array, index, top):
+    n = len(array)
+    if n <= top:
+        return array
+    else:
+        return sorted(array, key=lambda x: x[index], reverse=True)[:top]
+        
+def optimize2stage(symbol, timefram, strategy, repeat=1000, top=50):
+    dirpath = f'./optimize2stage_2020-2024/{strategy}/{symbol}/{timeframe}'
+    os.makedirs(dirpath, exist_ok=True)
+
+    data0 = from_pickle(symbol, timeframe)
+    jst0 = data0[Columns.JST]
+    t1 = jst0[-1]
+    t0 = t1 - timedelta(days=30 * 3)
+    n, data = TimeUtils.slice(data0, 'jst', t0, t1)   
+    print('Data length', len(jst0), jst0[0], jst0[-1])
+
+    result = []
+    for i in range(repeat):
+        trade_param, k = make_trade_param(symbol, randomize=True)
+        if strategy.find('supertrend') >= 0:
+            technical_param = make_technical_param_supertrend(randomize=True)
+            r = trade_supertrend(symbol, timeframe, data, technical_param, trade_param)
+        elif strategy.find('breakout') >= 0:
+            technical_param = make_technical_param_breakout()
+            r = trade_breakout(symbol, timeframe, data, technical_param, trade_param)            
+        (df, summary, profit_curve) = r
+        trade_num, profit, win_rate = summary
+        print('1st stage', i, profit)
+        result.append([i, technical_param, trade_param, profit])
+
+    selected = select_top(result, 3, top) 
+    
+    out = []
+    for i, (_, technical_param, trade_param, profit) in enumerate(selected):
+        if strategy.find('supertrend') >= 0:
+            r = trade_supertrend(symbol, timeframe, data0, technical_param, trade_param)
+        elif strategy.find('breakout') >= 0:
+            r = trade_breakout(symbol, timeframe, data0, technical_param, trade_param)            
+        (df, summary, profit_curve) = r
+        trade_num, profit, win_rate = summary
+        drawdown, t_drawdown = calc_drawdown(profit_curve)
+        d1, columns1 = expand('p1', technical_param)
+        d2, columns2 = expand('p2', trade_param)
+        d = [i] + d1 + d2 + summary + [drawdown, t_drawdown]
+        out.append(d)
+        print('2nd statge', i, profit)
+        fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+        ax.plot(profit_curve[0], profit_curve[1])
+        fig.savefig(os.path.join(dirpath, f'{symbol}_{timeframe}_profit#{i}.png'))
+        plt.close()
+        try:
+            columns = ['no'] + columns1 + columns2 + ['trade_num', 'profit', 'win_rate', 'drawdown', 't_drawdown']
+            df = pd.DataFrame(data=out, columns=columns)
+            df.to_csv(os.path.join(dirpath, 'trade_summary.csv'), index=False)
+        except:
+            continue
+        
     
 def calc_drawdown(profit_data):
     time = profit_data[0]
@@ -560,7 +621,7 @@ def calc_drawdown(profit_data):
 if __name__ == '__main__':
     args = sys.argv
     if len(args) != 4:
-        symbol = 'HK50'
+        symbol = 'NIKKEI'
         timeframe = 'M15'
         strategy = 'supertrend'
     else:        
@@ -573,4 +634,5 @@ if __name__ == '__main__':
         
     print(symbol, timeframe, strategy)
     #test(symbol, timeframe, strategy)
-    optimize(symbol, timeframe, strategy)
+    #optimize(symbol, timeframe, strategy)
+    optimize2stage(symbol, timeframe, strategy)
