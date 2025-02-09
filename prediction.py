@@ -571,10 +571,10 @@ def optimize2stage(symbol, timefram, strategy, repeat=1000, top=50):
             r = trade_breakout(symbol, timeframe, data0, technical_param, trade_param)            
         (df, summary, profit_curve) = r
         trade_num, profit, win_rate = summary
-        drawdown, t_drawdown = calc_drawdown(profit_curve)
+        drawdowns, drawdown = calc_drawdown(profit_curve)
         d1, columns1 = expand('p1', technical_param)
         d2, columns2 = expand('p2', trade_param)
-        d = [i] + d1 + d2 + summary + [drawdown, t_drawdown]
+        d = [i] + d1 + d2 + summary + [drawdown]
         out.append(d)
         print('2nd statge', i, profit)
         fig, ax = plt.subplots(1, 1, figsize=(10, 4))
@@ -582,38 +582,78 @@ def optimize2stage(symbol, timefram, strategy, repeat=1000, top=50):
         fig.savefig(os.path.join(dirpath, f'{symbol}_{timeframe}_profit#{i}.png'))
         plt.close()
         try:
-            columns = ['no'] + columns1 + columns2 + ['trade_num', 'profit', 'win_rate', 'drawdown', 't_drawdown']
+            columns = ['no'] + columns1 + columns2 + ['trade_num', 'profit', 'win_rate', 'drawdown']
             df = pd.DataFrame(data=out, columns=columns)
+            df = df.sort_value('profit', ascending=False)
             df.to_csv(os.path.join(dirpath, 'trade_summary.csv'), index=False)
         except:
             continue
-        
+     
     
-def calc_drawdown(profit_data):
+def search_upper(data, ibegin, value):
+    n = len(data)
+    for i in range(ibegin, n): 
+        if data[i] > value:
+            return i
+    return -1        
+    
+def calc_drawdown(profit_data, window=5):
+    def calc_down(data, index, j):
+        d = data[index: j]
+        imin = np.argmin(d)
+        return imin + index
+        
     time = profit_data[0]
     profits = profit_data[1]
-    ma = sma(profits, 10)
+    ma = sma(profits, window)
     n = len(time)
-    drawdown = None
-    t_drawdown = None
-    for i in range(10, n):
-        for j in range(i + 1, n):
-            if ma[j] >= ma[i]:
-                t = time[j] - time[i]
-                if t_drawdown is None:
-                    t_drawdown = t
-                else:
-                    if t > t_drawdown:
-                        t_drawdown = t
-                break
-            d = ma[i + 1: j + 1]
-            vmin = min(d)
-            if drawdown is None:
-                drawdown = vmin
+    drawdowns = []
+    sum_drawdown = 0
+    begin_value = None
+    ibegin = None
+    i = window
+    while i <  n - 1:
+        if ma[i] < ma[i - 1]:
+            begin_value = ma[i]
+            ibegin = i
+            iend = search_upper(ma, ibegin, begin_value)
+            if iend >= 0:
+                ilow = calc_down(ma, ibegin, iend)
+                drawdowns.append([ibegin, begin_value, ilow, ma[ilow], iend, ma[iend]])
+                sum_drawdown += (ma[ilow] - begin_value)
+                i = iend + 1
             else:
-                if vmin < drawdown:
-                    drawdown = vmin
-    return drawdown, t_drawdown
+                ilow = calc_down(ma, ibegin, n - 1)
+                drawdowns.append([ibegin, begin_value, ilow, ma[ilow], n - 1, ma[-1]])
+                sum_drawdown += (ma[ilow] - begin_value)
+                break
+        i += 1
+    return drawdowns, sum_drawdown
+    
+ 
+def test_drawdown():
+    import math
+    
+    t = datetime.now()
+    n = 1000
+    time = []
+    data = []
+    a = 1
+    for i in range(n):
+        data.append(math.sin(i / 20) * 100 + a * i)
+        time.append(t + timedelta(hours=1 * i))
+    drawdowns, sum_drawdown = calc_drawdown((time, data))
+    print(sum_drawdown)
+    fig, ax = makeFig(1, 1, (20, 5))
+    ax.scatter(time, data, s=5, color='gray', alpha=0.2)
+    for ibegin, begin, ilow, low, iend, end in drawdowns:
+        ax.scatter(time[ibegin], begin, color='blue', s=100, alpha=0.5 )
+        ax.scatter(time[ilow], low, color='red', s=100, alpha=0.5)
+        ax.scatter(time[iend], end, color='green', s=100, alpha=0.5 )
+    plt.show()
+    
+    
+    pass
     
  
    
@@ -622,7 +662,7 @@ if __name__ == '__main__':
     args = sys.argv
     if len(args) != 4:
         symbol = 'NIKKEI'
-        timeframe = 'M15'
+        timeframe = 'M5'
         strategy = 'supertrend'
     else:        
         symbol = args[1]
@@ -636,3 +676,4 @@ if __name__ == '__main__':
     #test(symbol, timeframe, strategy)
     #optimize(symbol, timeframe, strategy)
     optimize2stage(symbol, timeframe, strategy)
+    #test_drawdown()
