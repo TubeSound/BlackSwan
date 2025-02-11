@@ -4,6 +4,7 @@ import sys
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import random
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -584,10 +585,34 @@ def optimize2stage(symbol, timefram, strategy, repeat=1000, top=50):
         try:
             columns = ['no'] + columns1 + columns2 + ['trade_num', 'profit', 'win_rate', 'drawdown']
             df = pd.DataFrame(data=out, columns=columns)
-            df = df.sort_value('profit', ascending=False)
+            df = df.sort_values('profit', ascending=False)
             df.to_csv(os.path.join(dirpath, 'trade_summary.csv'), index=False)
-        except:
+        except Exception as e:
+            print(e)
             continue
+        
+def select_best_param(df):
+    def rotate(point, center, angle):
+        x = (point[0] - center[0]) * math.cos(angle) - (point[1] - center[1]) * math.sin(angle) + center[0]
+        y = (point[1] - center[1]) * math.cos(angle) + (point[0] - center[0]) * math.sin(angle) + center[1]
+        return (x, y)
+    
+    no = df['no'].to_numpy()
+    profit = df['profit'].to_numpy()
+    drawdon = df['drawdown'].to_numpy()
+    p0 = [min(profit), min(drawdown)]
+    p1 = [max(profit), max(drawdown)]
+    center = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2] 
+    vector = np.array(p1) - np.array(p0)
+    angle = np.arctan2(vector[0], vector[1])
+    xs = []
+    ys = []
+    for p, d in zip(profit, drawdonw):
+        x, y = rotate((p, d), center, angle)
+        xs.append(x)
+        ys.append(y)
+    imax = np.argmax(xs)
+    print(no[imax], profit[imax], drawdonw[imax])
      
     
 def search_upper(data, ibegin, value):
@@ -662,7 +687,7 @@ if __name__ == '__main__':
     args = sys.argv
     if len(args) != 4:
         symbol = 'NIKKEI'
-        timeframe = 'M5'
+        timeframe = 'H1'
         strategy = 'supertrend'
     else:        
         symbol = args[1]
