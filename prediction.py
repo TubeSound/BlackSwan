@@ -599,7 +599,7 @@ def select_best_param(df):
     
     no = df['no'].to_numpy()
     profit = df['profit'].to_numpy()
-    drawdon = df['drawdown'].to_numpy()
+    drawdown = df['drawdown'].to_numpy()
     p0 = [min(profit), min(drawdown)]
     p1 = [max(profit), max(drawdown)]
     center = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2] 
@@ -607,12 +607,13 @@ def select_best_param(df):
     angle = np.arctan2(vector[0], vector[1])
     xs = []
     ys = []
-    for p, d in zip(profit, drawdonw):
+    for p, d in zip(profit, drawdown):
         x, y = rotate((p, d), center, angle)
         xs.append(x)
         ys.append(y)
     imax = np.argmax(xs)
-    print(no[imax], profit[imax], drawdonw[imax])
+    print(no[imax], profit[imax], drawdown[imax])
+    return df[df['no'] == no[imax]]
      
     
 def search_upper(data, ibegin, value):
@@ -680,8 +681,10 @@ def test_drawdown():
     
     pass
     
- 
-   
+def test_select_param():
+    df = pd.read_csv('./optimize2stage_2020-2024/supertrend/NIKKEI/H1/trade_summary.csv')
+    df1 = select_best_param(df)
+    print(df1)    
     
 if __name__ == '__main__':
     args = sys.argv
@@ -700,5 +703,5 @@ if __name__ == '__main__':
     print(symbol, timeframe, strategy)
     #test(symbol, timeframe, strategy)
     #optimize(symbol, timeframe, strategy)
-    optimize2stage(symbol, timeframe, strategy)
-    #test_drawdown()
+    #optimize2stage(symbol, timeframe, strategy)
+    test_select_param()
