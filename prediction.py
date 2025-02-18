@@ -402,11 +402,14 @@ def make_trade_param(symbol, randomize=False):
         k = 0.001
     elif symbol == 'TSLA':
         k = 0.01
-        begin_hour = 11
-        begin_minute = 30
+        begin_hour = 21
+        begin_minute = 0
         hours = 7
     elif symbol == 'NVDA':
         k = 0.003
+        begin_hour = 21
+        begin_minute = 0
+        hours = 7
     elif symbol == 'DAX':
         k = 0.5
     elif symbol == 'HK50':
@@ -415,12 +418,12 @@ def make_trade_param(symbol, randomize=False):
         k = 1.0
     
     if randomize:
-        sl = random.randint(1, 10) * 50
-        target_profit = random.randint(1, 10) * 50
-        trail_stop = random.randint(1, 5) * 50
+        sl = random.randint(1, 10) * 20
+        trail_target = random.randint(1, 10) * 50
+        trail_stop = random.randint(1, 10) * 20
     else:
         sl = 250
-        target_profit = 300
+        trail_target = 300
         trail_stop = 200
     
     param =  {
@@ -428,11 +431,9 @@ def make_trade_param(symbol, randomize=False):
                 'begin_hour': begin_hour,
                 'begin_minute': begin_minute,
                 'hours': hours,
-                'sl': {
-                        'method': Simulation.SL_FIX,
-                        'value': int(sl * k)
-                    },
-                'target_profit': int(target_profit * k),
+                'sl_method': Simulation.SL_FIX,
+                'sl_value': int(sl * k)
+                'trail_target': int(trail_target * k),
                 'trail_stop': int(trail_stop * k), 
                 'volume': 0.1, 
                 'position_max':2, 
@@ -565,12 +566,13 @@ def optimize2stage(symbol, timefram, strategy, repeat=1000, top=50):
     selected = select_top(result, 3, top) 
     
     out = []
+    df_summary = None
     for i, (_, technical_param, trade_param, profit) in enumerate(selected):
         if strategy.find('supertrend') >= 0:
             r = trade_supertrend(symbol, timeframe, data0, technical_param, trade_param)
         elif strategy.find('breakout') >= 0:
             r = trade_breakout(symbol, timeframe, data0, technical_param, trade_param)            
-        (df, summary, profit_curve) = r
+        (_, summary, profit_curve) = r
         trade_num, profit, win_rate = summary
         drawdowns, drawdown = calc_drawdown(profit_curve)
         d1, columns1 = expand('p1', technical_param)
@@ -584,19 +586,25 @@ def optimize2stage(symbol, timefram, strategy, repeat=1000, top=50):
         plt.close()
         try:
             columns = ['no'] + columns1 + columns2 + ['trade_num', 'profit', 'win_rate', 'drawdown']
-            df = pd.DataFrame(data=out, columns=columns)
-            df = df.sort_values('profit', ascending=False)
-            df.to_csv(os.path.join(dirpath, 'trade_summary.csv'), index=False)
+            df_summary = pd.DataFrame(data=out, columns=columns)
+            df_summary = df_summary.sort_values('profit', ascending=False)
+            df_summary.to_csv(os.path.join(dirpath, 'trade_summary.csv'), index=False)
         except Exception as e:
             print(e)
             continue
         
-def select_best_param(df):
+    df_best = select_best_param(df_summary)
+    df_best.to_csv(os.path.join(dirpath, 'trade_best_param.csv'), index=False)
+        
+        
+def select_best_param(df0):
     def rotate(point, center, angle):
         x = (point[0] - center[0]) * math.cos(angle) - (point[1] - center[1]) * math.sin(angle) + center[0]
         y = (point[1] - center[1]) * math.cos(angle) + (point[0] - center[0]) * math.sin(angle) + center[1]
         return (x, y)
     
+    df = df0[df0['profit'] > 0]
+    print(df.columns)
     no = df['no'].to_numpy()
     profit = df['profit'].to_numpy()
     drawdown = df['drawdown'].to_numpy()
@@ -608,7 +616,7 @@ def select_best_param(df):
     xs = []
     ys = []
     for p, d in zip(profit, drawdown):
-        x, y = rotate((p, d), center, angle)
+        x, y = rotate((p, d), center, -angle)
         xs.append(x)
         ys.append(y)
     imax = np.argmax(xs)
@@ -689,7 +697,7 @@ def test_select_param():
 if __name__ == '__main__':
     args = sys.argv
     if len(args) != 4:
-        symbol = 'NIKKEI'
+        symbol = 'TSLA'
         timeframe = 'H1'
         strategy = 'supertrend'
     else:        
@@ -703,5 +711,5 @@ if __name__ == '__main__':
     print(symbol, timeframe, strategy)
     #test(symbol, timeframe, strategy)
     #optimize(symbol, timeframe, strategy)
-    #optimize2stage(symbol, timeframe, strategy)
-    test_select_param()
+    optimize2stage(symbol, timeframe, strategy)
+    #test_select_param()

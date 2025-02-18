@@ -256,8 +256,8 @@ class TradeBot:
         
     def entry(self, data, signal, index, time):
         volume = self.trade_param['volume']
-        sl = self.trade_param['sl']['value']
-        target_profit = self.trade_param['target_profit']
+        sl = self.trade_param['sl_value']
+        trail_target = self.trade_param['trail_target']
         trailing_stop = self.trade_param['trail_stop']          
         timelimit = self.trade_param['timelimit']                       
         position_max = int(self.trade_param['position_max'])
@@ -272,7 +272,7 @@ class TradeBot:
         try:
             ret, position_info = self.mt5.entry(signal, index, time, volume, stoploss=sl, takeprofit=None)
             if ret:
-                position_info.target_profit = target_profit
+                position_info.trail_target = trail_target
                 self.trade_manager.add_position(position_info)
                 self.debug_print('<Entry> signal', position_info.signal, position_info.symbol, position_info.entry_index, position_info.entry_time)
         except Exception as e:
@@ -284,8 +284,8 @@ class TradeBot:
         
     def trailing(self):
         trailing_stop = self.trade_param['trail_stop'] 
-        target_profit = self.trade_param['target_profit']
-        if trailing_stop == 0 or target_profit == 0:
+        trail_target = self.trade_param['trail_target']
+        if trailing_stop == 0 or trail_target == 0:
             return
         remove_tickets = []
         for ticket, info in self.trade_manager.positions.items():
@@ -333,147 +333,43 @@ class TradeBot:
                 else:
                     self.debug_print('<Closed> Fail', self.symbol, position.desc())           
         self.trade_manager.remove_positions(removed_tickets)
-    
-    
-"""
-だめだったやつ
-DOW 2025.01.01
-  elif symbol == 'DOW':
-        param['atr_window'] = 79
-        param['atr_multiply'] = 2.4
-        param['ma_window'] = 38
-        param['short_term'] = 17
 
-"""
+
+def load_params(symbol, timeframe, volume, position_max):
+    path = f'./optimize2stage_2020-2024/supertrend/{symbol}/{timeframe}/trade_best_param.csv'
+    df = pd.read_csv(path)
+    technical = {}
+    technical['atr_window'] = df['p1.atr_window'].to_list()[0]
+    technical['atr_multiply'] = df['p1.atr_multiply'].to_list()[0]
+    technical['ma_window'] = df['p1.ma_window'].to_list()[0]
+    technical['short_term'] = df['p1.short_term'].to_list()[0]
+    trade = {}
+    trade['begin_hour'] = df['p2.begin_hour'].to_list()[0] 
+    trade['begin_minute'] = df['p2.begin_minute'].to_list()[0]
+    trade['hours'] = df['p2.hours'].to_list()[0]
+    trade['sl_method'] = df['p2.sl_method'].to_list()[0]
+    trade['sl_value'] = df['p2.sl_value'].to_list()[0]
+    trade['volume'] = volume
+    trade['position_max'] = position_max
+    trade['trail_target'] = df['p2.trail_target'].to_list()[0]
+    trade['trail_stop'] = df['p2.trail_stop'].to_list()[0]
+    trade['timelimit'] = df['p2.timelimit'].to_list()[0]
+    return technical, trade
     
-        
-def technical_param(symbol):
-    param = {}
-    if symbol == 'NIKKEI':
-        param['atr_window'] = 51
-        param['atr_multiply'] = 1.3
-        param['ma_window'] = 35
-        param['short_term'] = 8
-    elif symbol == 'DOW':
-        param['atr_window'] = 51
-        param['atr_multiply'] = 2.0
-        param['ma_window'] = 24
-        param['short_term'] = 12
-    elif symbol == 'NSDQ':
-        param['atr_window'] = 85
-        param['atr_multiply'] = 1.13
-        param['ma_window'] = 19
-        param['short_term'] = 4
-    elif symbol == 'XAUUSD':
-        param['atr_window'] = 21
-        param['atr_multiply'] = 3.2
-        param['ma_window'] = 93
-        param['short_term'] = 34
-    elif symbol == 'XPDUSD':
-        param['atr_window'] = 66
-        param['atr_multiply'] = 3.52
-        param['ma_window'] = 36
-        param['short_term'] = 9
-    elif symbol == 'XAGUSD':
-        param['atr_window'] = 10
-        param['atr_multiply'] = 2.0
-        param['ma_window'] = 57
-        param['short_term'] = 27
-    elif symbol == 'NVDA':
-        param['atr_window'] = 77
-        param['atr_multiply'] = 3.05
-        param['ma_window'] = 53
-        param['short_term'] = 10
-    elif symbol == 'TSLA':
-        param['atr_window'] = 82
-        param['atr_multiply'] = 0.90
-        param['ma_window'] = 37
-        param['short_term'] = 6
-    return param
-
-def trade_param(symbol):
-    volume =0.05
-    if symbol == 'NIKKEI':
-        sl = 200 #500
-        target_profit = 400
-        trail_stop = 250
-        #volume = 0.1
-    elif symbol == 'DOW':
-        sl = 150
-        target_profit = 400
-        trail_stop = 200
-        #volume = 0.1
-    elif symbol == 'NSDQ':
-        sl = 50
-        target_profit = 200
-        trail_stop = 50
-        #volume = 0.1
-    elif symbol == 'XAUUSD':
-        sl = 20
-        target_profit = 30
-        trail_stop = 20
-        volume = 0.05
-    elif symbol == 'XPDUSD':
-        sl = 1
-        target_profit = 2
-        trail_stop = 0.5
-    elif symbol == 'XAGUSD':
-        sl = 0.1
-        target_profit = 0.4
-        trail_stop = 0.1
-        volume = 0.05
-    elif symbol == 'NVDA':
-        sl = 1
-        target_profit = 0
-        trail_stop = 0
-        #volume = 0.1
-    elif symbol == 'TSLA':
-        sl = 4
-        target_profit = 0
-        trail_stop = 1
-        volume = 2
-        
-    param =  {
-                'strategy': 'supertrend',
-                'begin_hour': 0,
-                'begin_minute': 0,
-                'hours': 0,
-                'sl': {
-                        'method': Simulation.SL_FIX,
-                        'value': sl
-                    },
-                'target_profit': target_profit,
-                'trail_stop': trail_stop, 
-                'volume': volume, 
-                'position_max': 5, 
-                'timelimit': 0}
-    return param
-
-"""
-def trade_param():
-   param = {'begin_hour':8, 
-                  'begin_minute':0,
-                  'hours': 24,
-                  'sl': {'method': 1, 'value':50},
-                  'volume': 0.1,
-                  'position_max':5,
-                  'trail_target':100, 
-                  'trail_stop': 50,
-                  'timelimit':0}
-   return param        
-"""
 
 def create_bot(symbol, timeframe):
-    bot = TradeBot(symbol, timeframe, 1, Indicators.SUPERTREND_ENTRY, Indicators.SUPERTREND_EXIT, technical_param(symbol), trade_param(symbol))    
+    technical_param, trade_param = load_params(symbol, timeframe, 10, 2)
+    bot = TradeBot(symbol, timeframe, 1, Indicators.SUPERTREND_ENTRY, Indicators.SUPERTREND_EXIT, technical_param, trade_param)    
     bot.set_sever_time(3, 2, 11, 1, 3.0)
     return bot
 
      
 def test():
     symbols = ['DOW', 'NIKKEI', 'NSDQ'] #, 'XAUUSD', 'XPDUSD', 'XAGUSD'] #, 'NVDA'] #, 'TSLA']
+    symbols = ['TSLA']
     bots = {}
     for i, symbol in enumerate(symbols):
-        bot = create_bot(symbol, 'M15')
+        bot = create_bot(symbol, 'M5')
         if i == 0:
             Mt5Trade.connect()
         bot.run()
