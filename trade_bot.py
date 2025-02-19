@@ -358,7 +358,7 @@ def load_params(symbol, timeframe, volume, position_max):
     
 
 def create_bot(symbol, timeframe):
-    technical_param, trade_param = load_params(symbol, timeframe, 10, 2)
+    technical_param, trade_param = load_params(symbol, timeframe, 2, 2)
     bot = TradeBot(symbol, timeframe, 1, Indicators.SUPERTREND_ENTRY, Indicators.SUPERTREND_EXIT, technical_param, trade_param)    
     bot.set_sever_time(3, 2, 11, 1, 3.0)
     return bot
