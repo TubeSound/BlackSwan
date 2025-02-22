@@ -505,12 +505,15 @@ def detect_signal(data):
     return up, down, up_event, down_event
                 
                 
-def calc_atr(dic, window):
+def calc_atr(dic, window, how='sma'):
     hi = dic[Columns.HIGH]
     lo = dic[Columns.LOW]
     cl = dic[Columns.CLOSE]
     tr = true_range(hi, lo, cl)
-    atr = sma(tr, window)
+    if how == 'sma':
+        atr = sma(tr, window)
+    elif how == 'ema':
+        atr = ema(tr, window)
     return atr
 
 def ATR(dic: dict, term: int, term_long:int):
@@ -1115,6 +1118,36 @@ def MAGAP_SIGNAL(timeframe, data, short_slope_threshold, long_slope_threshold, d
     data[Indicators.MAGAP_EXIT] = ext
     return up, down
 
+def calc_std(data, window):
+    cl = data[Columns.CLOSE]
+    n = len(cl)
+    std = nans(n)     
+    for i in range(window - 1, n):
+        d = cl[i - window + 1: i + 1]    
+        std[i] = np.std(d) 
+    return np.array(std)  
+
+
+def slice_upper(vector, value):
+    n = len(vector)
+    out = np.full(n, np.nan)
+    for i in range(n):
+        if vector[i] > value:
+            out[i] = 1
+    return out
+        
+def SQUEEZER(data, window, multiply, length):
+    op = data[Columns.OPEN]
+    hi = data[Columns.HIGH]
+    lo = data[Columns.LOW]
+    cl = data[Columns.CLOSE]
+    std = calc_std(data, window) * multiply
+    atr = calc_atr(data, window, how='ema')
+    dif = atr - std
+    data[Indicators.SQUEEZER] = slice_upper(dif, 0)
+    data[Indicators.SQUEEZER_STD] = std
+    data[Indicators.SQUEEZER_ATR] = atr
+    
 
 def detect_terms(vector, value):
     terms = []

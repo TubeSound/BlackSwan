@@ -31,9 +31,9 @@ def download(symbols, save_holder):
     api.connect()
     for symbol in symbols:
         for tf in [TimeFrame.M5, TimeFrame.M15, TimeFrame.M30, TimeFrame.H1, TimeFrame.H4, TimeFrame.D1, TimeFrame.M1]:
-            for year in range(2020, 2026):
-                for month in range(1, 13):
-                    t0 = datetime(year, month, 1, 7)
+            for year in range(2025, 2026):
+                for month in range(2, 13):
+                    t0 = datetime(year, month, 1, 0)
                     t0 = t0.replace(tzinfo=JST)
                     t1 = t0 + relativedelta(months=1) - timedelta(seconds=1)
                     if tf == 'TICK':
@@ -56,9 +56,9 @@ def download_tick(symbols, save_holder):
     api.connect()
     for symbol in symbols:
         year = 2024
-        month = 7
+        month = 12
         tf = 'TICK'
-        t0 = datetime(year, month, 25, 7)
+        t0 = datetime(year, month, 1, 0)
         t0 = t0.replace(tzinfo=JST)
         t1 = datetime.now(JST)
         df = api.get_ticks(symbol, t0, t1)
@@ -90,13 +90,13 @@ def save_data():
     year_from = 2020
     month_from = 1
     year_to = 2025
-    month_to = 1
+    month_to = 2
     loader = DataLoader()
     for symbol in all_symbols():
-        if symbol in ['NIKKEI', 'NSDQ']:
-            tfs = ['M1', 'M5', 'M15' 'M30', 'H1', 'H4', 'D1']
+        if symbol in ['TSLA', 'NVDA', 'NIKKEI', 'NSDQ']:
+            tfs = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1']
         else:
-            tfs = ['M15' 'M30', 'H1', 'H4', 'D1']
+            tfs = ['M15' , 'M30', 'H1', 'H4', 'D1']
         for tf in tfs:
             n, data = loader.load_data(symbol, tf, year_from, month_from, year_to, month_to)
             os.makedirs('./data', exist_ok=True)
@@ -105,7 +105,7 @@ def save_data():
 def main():
     dl1()
     save_data()
-    #download_tick(['NIKKEI', 'DOW', 'USDJPY'], '../data/tick')
+    #download_tick(['DOW', 'NIKKEI', 'NSDQ', 'XAUUSD'], './data/Axiory/tick')
     
     
 if __name__ == '__main__':
