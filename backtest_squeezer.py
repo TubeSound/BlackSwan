@@ -74,35 +74,59 @@ def timefilter(data, year_from, month_from, day_from, year_to, month_to, day_to)
 
 
         
-def evaluate(symbol, timeframe, days=20):
+def evaluate(symbol, timeframe, days=5):
     dirpath = f'./debug/squeezer/{symbol}/{timeframe}'
     os.makedirs(dirpath, exist_ok=True)
     data0 = from_pickle(symbol, timeframe)
-    jst = data0[Columns.JST]
-    t1 = jst[-1]
-    t0 = t1 - timedelta(days=days)
-    n, data = TimeUtils.slice(data0, Columns.JST, t0, t1)   
-    
-    jst = data[Columns.JST]
-    cl = data[Columns.CLOSE]
-    
-    SQUEEZER(data, 20, 2.0, 20)
-    sqz = data[Indicators.SQUEEZER]
-    std = data[Indicators.SQUEEZER_STD]
-    atr = data[Indicators.SQUEEZER_ATR]
+    time = data0[Columns.JST]
+    t0 = time[0]
+    t1 = t0 + timedelta(days=days)
 
-    fig, axes = makeFig(2, 1, (16, 10))
-    axes[0].plot(jst, cl, color='blue', alpha=0.4)
-    for i, s in enumerate(sqz):
-        if s > 0:
-            axes[0].scatter(jst[i], cl[i], color='red', alpha=0.2, s= 50)
-            axes[0].hlines(cl[i], jst[0], jst[-1], color='red', alpha=0.5)
-    axes[1].plot(jst, std, color='blue', alpha=0.4, label='std')
-    axes[1].plot(jst, atr, color='red', alpha=0.4, label='atr')
-    axes[1].legend()
-    fig.savefig(os.path.join(dirpath,'imgge.png'))
+    SQUEEZER(data0, 20, 2.0, 100)
+    count = 0
+    while t1 < time[-1]:
+        n, data = TimeUtils.slice(data0, Columns.JST, t0, t1)   
+        jst = data[Columns.JST]
+        cl = data[Columns.CLOSE]
     
- 
+        sqz = data[Indicators.SQUEEZER]
+        std = data[Indicators.SQUEEZER_STD]
+        atr = data[Indicators.SQUEEZER_ATR]
+        upper = data[Indicators.SQUEEZER_UPPER]
+        lower = data[Indicators.SQUEEZER_LOWER]
+        signal = data[Indicators.SQUEEZER_SIGNAL]
+        entry = data[Indicators.SQUEEZER_ENTRY]
+
+        fig, axes = makeFig(2, 1, (16, 10))
+        axes[0].plot(jst, cl, color='blue', alpha=0.4)
+        for i, s in enumerate(signal):
+            if s == 1:
+                color='green'
+            elif s == -1:
+                color='red'
+            else:
+                continue
+            axes[0].scatter(jst[i], cl[i], marker='o', color=color, alpha=0.3, s=150)
+        axes[0].plot(jst, upper, color='green', alpha=0.5)       
+        axes[0].plot(jst, lower, color='orange', alpha=0.5) 
+        for i, s in enumerate(entry):
+            if s == 1:
+                color = 'green'
+                marker = '^'
+            elif s == -1:
+                color = 'red'
+                marker = 'v'
+            else:
+                continue
+            axes[0].scatter(jst[i], cl[i], color=color, marker=marker, s = 100)
+        axes[1].plot(jst, std, color='blue', alpha=0.4, label='std')
+        axes[1].plot(jst, atr, color='red', alpha=0.4, label='atr')
+        axes[1].legend()
+        fig.savefig(os.path.join(dirpath, f'#{count}_imgge.png'))
+        plt.close()
+        count += 1
+        t0 = t1
+        t1 = t0 + timedelta(days=days)
 
 
     

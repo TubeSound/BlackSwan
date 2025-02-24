@@ -412,7 +412,6 @@ def MABAND_SIGNAL(dic: dict):
 
 def detect_cross(band, range_signal):
     n = len(band)
-
     sig = full(n, 0)
     for i in range(1, n):
         threshold = range_signal[i]
@@ -1136,18 +1135,76 @@ def slice_upper(vector, value):
             out[i] = 1
     return out
         
-def SQUEEZER(data, window, multiply, length):
+def SQUEEZER(data, window, multiply, length, k_atr=2.0):
     op = data[Columns.OPEN]
     hi = data[Columns.HIGH]
     lo = data[Columns.LOW]
     cl = data[Columns.CLOSE]
+    n = len(cl)
     std = calc_std(data, window) * multiply
     atr = calc_atr(data, window, how='ema')
+    atr2 = calc_atr(data, window)
     dif = atr - std
-    data[Indicators.SQUEEZER] = slice_upper(dif, 0)
+    sqz = slice_upper(dif, 0)
+    terms = detect_terms(sqz, 1)
+    points = []
+    for i in range(len(terms)):
+        if i == 0:
+            points.append([terms[i][0], 0])
+            continue
+        begin0, _ = terms[i - 1]
+        begin1, _ = terms[i]
+        if cl[begin1] > cl[begin0]:
+            points.append([begin1, 1])
+        elif cl[begin1] < cl[begin0]:
+            points.append([begin1, -1])
+        else:
+            points.append([begin1, 0])
+
+    upper = np.full(n, np.nan)
+    upper_sl = np.full(n, np.nan)
+    lower = np.full(n, np.nan)   
+    lower_sl = np.full(n, np.nan)
+    signal = np.full(n, 0)         
+    for i in range(2, len(points)):
+        begin0, _ = points[i - 2] 
+        begin1, s = points[i - 1]
+        begin2, _ = points[i]
+        if s == 1:
+            signal[begin1] = 1
+        elif s == -1:
+            signal[begin1] = -1
+        if i == len(points) - 1:
+            iend = n - 1
+        else:
+            iend = (begin1 + length) % begin2
+        for j in range(begin1, iend):
+            if s == 1:
+                upper[j] = cl[begin1] + atr2[j] * k_atr
+                upper_sl[j] = cl[begin1] - atr2[j] * k_atr
+                lower[j] = cl[begin0] - atr2[j] * k_atr
+                lower_sl[j] = cl[begin0] + atr2[j] * k_atr
+            elif s == -1:
+                lower[j] = cl[begin1] - atr2[j] * k_atr
+                lower_sl[j] = cl[begin1] + atr2[j] * k_atr
+                upper[j] = cl[begin0] + atr2[j] * k_atr
+                upper_sl[j] = cl[begin0] - atr2[j] * k_atr
+            
+            
+    entry = np.full(n, 0)
+    for i in range(1, n):
+        if cl[i - 1] <= upper[i - 1] and cl[i] > upper[i]:
+            entry[i] = 1
+        if cl[i - 1] >= lower[i - 1] and cl[i] < lower[i]:
+            entry[i] = -1        
+    
+    data[Indicators.SQUEEZER] = sqz
     data[Indicators.SQUEEZER_STD] = std
     data[Indicators.SQUEEZER_ATR] = atr
-    
+    data[Indicators.SQUEEZER_UPPER] = upper
+    data[Indicators.SQUEEZER_LOWER] = lower
+    data[Indicators.SQUEEZER_SIGNAL] = signal
+    data[Indicators.SQUEEZER_ENTRY] = entry
 
 def detect_terms(vector, value):
     terms = []
