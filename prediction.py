@@ -432,7 +432,7 @@ def make_trade_param(symbol, randomize=False):
                 'begin_minute': begin_minute,
                 'hours': hours,
                 'sl_method': Simulation.SL_FIX,
-                'sl_value': int(sl * k)
+                'sl_value': int(sl * k),
                 'trail_target': int(trail_target * k),
                 'trail_stop': int(trail_stop * k), 
                 'volume': 0.1, 
@@ -698,7 +698,7 @@ if __name__ == '__main__':
     args = sys.argv
     if len(args) != 4:
         symbol = 'TSLA'
-        timeframe = 'H1'
+        timeframe = 'M15'
         strategy = 'supertrend'
     else:        
         symbol = args[1]

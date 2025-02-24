@@ -19,7 +19,7 @@ class Position:
     def __init__(self, trade_param, signal: Signal, index: int, time: datetime, price, volume, sl):
         self.id = None
         self.sl = sl
-        self.target = trade_param['target_profit']
+        self.target = trade_param['trail_target']
         self.trail_stop = trade_param['trail_stop']
   
         self.signal = signal
@@ -222,8 +222,8 @@ class Simulation:
         self.positions = Positions(self.timefilter)
         
     def calc_sl(self, index, signal, price):
-        method = self.trade_param['sl']['method']
-        value = self.trade_param['sl']['value']
+        method = self.trade_param['sl_method']
+        value = self.trade_param['sl_value']
         if method == self.SL_NONE:
             return 0
         elif method == self.SL_FIX:
