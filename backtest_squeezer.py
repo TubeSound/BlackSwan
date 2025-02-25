@@ -73,8 +73,21 @@ def timefilter(data, year_from, month_from, day_from, year_to, month_to, day_to)
     return TimeUtils.slice(data, data['jst'], t0, t1)
 
 
+def plot_marker(ax, data, signal, markers, colors, alpha=0.5, s=50):
+    time = data[Columns.JST]
+    cl = data[Columns.CLOSE]
+    for i, status in enumerate(signal):
+        if status == 1:
+            color = colors[0]
+            marker = markers[0]
+        elif status == -1:
+            color = colors[1]
+            marker = markers[1]
+        else:
+            continue
+        ax.scatter(time[i], cl[i], color=color, marker=marker, alpha=alpha, s=s)
         
-def evaluate(symbol, timeframe, days=5):
+def evaluate(symbol, timeframe, days=10):
     dirpath = f'./debug/squeezer/{symbol}/{timeframe}'
     os.makedirs(dirpath, exist_ok=True)
     data0 = from_pickle(symbol, timeframe)
@@ -96,29 +109,15 @@ def evaluate(symbol, timeframe, days=5):
         lower = data[Indicators.SQUEEZER_LOWER]
         signal = data[Indicators.SQUEEZER_SIGNAL]
         entry = data[Indicators.SQUEEZER_ENTRY]
+        ext = data[Indicators.SQUEEZER_EXIT]
 
         fig, axes = makeFig(2, 1, (16, 10))
         axes[0].plot(jst, cl, color='blue', alpha=0.4)
-        for i, s in enumerate(signal):
-            if s == 1:
-                color='green'
-            elif s == -1:
-                color='red'
-            else:
-                continue
-            axes[0].scatter(jst[i], cl[i], marker='o', color=color, alpha=0.3, s=150)
+        plot_marker(axes[0], data, signal, ['o', 'o'], ['green', 'red'], s=150)
         axes[0].plot(jst, upper, color='green', alpha=0.5)       
         axes[0].plot(jst, lower, color='orange', alpha=0.5) 
-        for i, s in enumerate(entry):
-            if s == 1:
-                color = 'green'
-                marker = '^'
-            elif s == -1:
-                color = 'red'
-                marker = 'v'
-            else:
-                continue
-            axes[0].scatter(jst[i], cl[i], color=color, marker=marker, s = 100)
+        plot_marker(axes[0], data, entry, ['^', 'v'], ['green', 'red'], s=100)
+        plot_marker(axes[0], data, ext, ['x'], ['gray'], s=200, alpha=0.2)
         axes[1].plot(jst, std, color='blue', alpha=0.4, label='std')
         axes[1].plot(jst, atr, color='red', alpha=0.4, label='atr')
         axes[1].legend()

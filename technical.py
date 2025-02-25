@@ -1181,14 +1181,22 @@ def SQUEEZER(data, window, multiply, length, k_atr=2.0):
         for j in range(begin1, iend):
             if s == 1:
                 upper[j] = cl[begin1] + atr2[j] * k_atr
-                upper_sl[j] = cl[begin1] - atr2[j] * k_atr
                 lower[j] = cl[begin0] - atr2[j] * k_atr
-                lower_sl[j] = cl[begin0] + atr2[j] * k_atr
             elif s == -1:
                 lower[j] = cl[begin1] - atr2[j] * k_atr
-                lower_sl[j] = cl[begin1] + atr2[j] * k_atr
                 upper[j] = cl[begin0] + atr2[j] * k_atr
-                upper_sl[j] = cl[begin0] - atr2[j] * k_atr
+                
+        if i == len(points) - 1:
+            iend = n - 1
+        else:
+            iend = begin2                
+        for j in range(begin1, iend):
+            if s == 1:
+                upper_sl[j] = cl[begin1] - atr2[j] * k_atr
+                lower_sl[j] = cl[begin0] + atr2[j] * k_atr
+            elif s == -1:
+                lower_sl[j] = cl[begin1] + atr2[j] * k_atr
+                upper_sl[j] = cl[begin0] - atr2[j] * k_atr        
             
             
     entry = np.full(n, 0)
@@ -1198,14 +1206,24 @@ def SQUEEZER(data, window, multiply, length, k_atr=2.0):
         if cl[i - 1] >= lower[i - 1] and cl[i] < lower[i]:
             entry[i] = -1        
     
+    ext = np.full(n, 0)
+    for i in range(1, len(points)):
+        index0, status0 = points[i - 1]
+        index1, status1 = points[i]
+        if (status0 * status1) == -1:
+            ext[index1] = 1    
+        
     data[Indicators.SQUEEZER] = sqz
     data[Indicators.SQUEEZER_STD] = std
     data[Indicators.SQUEEZER_ATR] = atr
     data[Indicators.SQUEEZER_UPPER] = upper
+    data[Indicators.SQUEEZER_UPPER_SL] = upper_sl
     data[Indicators.SQUEEZER_LOWER] = lower
+    data[Indicators.SQUEEZER_LOWER_SL] = lower_sl
     data[Indicators.SQUEEZER_SIGNAL] = signal
     data[Indicators.SQUEEZER_ENTRY] = entry
-
+    data[Indicators.SQUEEZER_EXIT] = ext
+    
 def detect_terms(vector, value):
     terms = []
     n = len(vector)
