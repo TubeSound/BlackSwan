@@ -41,8 +41,9 @@ scheduler = sched.scheduler()
 
 # -----
 def utcnow():
-    utc = datetime.utcnow()
-    utc = utc.replace(tzinfo=UTC)
+    #utc1 = datetime.utcnow()
+    #utc1 = utc1.replace(tzinfo=UTC)
+    utc = datetime.now(UTC)
     return utc
 
 def utc2localize(aware_utc_time, timezone):
@@ -369,7 +370,7 @@ def test():
     symbols = ['TSLA']
     bots = {}
     for i, symbol in enumerate(symbols):
-        bot = create_bot(symbol, 'M5')
+        bot = create_bot(symbol, 'M15')
         if i == 0:
             Mt5Trade.connect()
         bot.run()

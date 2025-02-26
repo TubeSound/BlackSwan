@@ -30,9 +30,15 @@ def now():
 
 # numpy timestamp -> pydatetime naive
 def nptimestamp2pydatetime(npdatetime):
-    timestamp = (npdatetime - np.datetime64('1970-01-01T00:00:00Z')) / np.timedelta64(1, 's')
-    dt = datetime.utcfromtimestamp(timestamp)
+    unix_epoch = np.datetime64(0, "s")
+    one_second = np.timedelta64(1, "s")
+    seconds_since_epoch = (npdatetime - unix_epoch) / one_second
+    dt = datetime.utcfromtimestamp(seconds_since_epoch)
+    #timestamp = (npdatetime - np.datetime64('1970-01-01T00:00:00Z')) / np.timedelta64(1, 's')
+    #dt2 = datetime.utcfromtimestamp(timestamp)
     return dt
+
+
 
 def slice(df, ibegin, iend):
     new_df = df.iloc[ibegin: iend + 1, :]
