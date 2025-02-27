@@ -51,16 +51,14 @@ class Position:
         
         # check stoploss
         if self.signal == Signal.LONG:
-            profit = l - self.entry_price
-            if profit <= -1 * self.sl:
-                 self.exit(index, time, self.entry_price - self.sl)
+            if l <= self.sl:
+                 self.exit(index, time, self.sl)
                  self.losscutted = True
                  return True
             profit = c - self.entry_price
         else:
-            profit = self.entry_price - h
-            if profit <= -1 * self.sl:
-                self.exit(index, time, self.entry_price + self.sl)
+            if h >= self.sl:
+                self.exit(index, time, self.sl)
                 self.losscutted = True
                 return True
             profit = c - self.entry_price            
@@ -206,6 +204,7 @@ class Simulation:
         self.strategy = self.trade_param['strategy'].upper()
         self.volume = trade_param['volume']
         self.position_num_max = trade_param['position_max']
+        self.sl_value = self.trade_param['sl_value']
         self.last_entry_price = None
         self.last_entry_signal = None
         try :
@@ -217,53 +216,22 @@ class Simulation:
             else:
                 self.timefilter = TimeFilter(JST, begin_hour, begin_minute, hours)
         except:
-            self.timefilter = None
-                
+            self.timefilter = None                
         self.positions = Positions(self.timefilter)
         
-    def calc_sl(self, index, signal, price):
-        method = self.trade_param['sl_method']
-        value = self.trade_param['sl_value']
-        if method == self.SL_NONE:
-            return 0
-        elif method == self.SL_FIX:
-            # fix
-            return value
-        elif method == self.SL_HIGH_LOW:
-            # high_low
-            if signal == Signal.LONG:
-                low = self.data['low']
-                d = low[index - value: index + 1]
-                return price - np.nanmin(d)
-            else:
-                high  = self.data['high']
-                d = high[index - value: index + 1]
-                return np.nanmax(d) - price
-        elif method == self.SL_ADAPTIVE:
-            if self.last_entry_signal is None:
-                return value
-            else:
-                if signal == self.last_entry_signal:
-                    v = abs(price - self.last_entry_price)
-                    return min([v, value])
-                else:
-                    self.last_entry_price = None
-                    self.last_entry_signal = None
-                    return value
-        else:
-            return 0
-            
-        
-    def run(self, data, entry_signal, exit_signal):
+    def run(self, data, entry_signal, exit_signal, sl_long_signal, sl_short_signal):
         self.data = data
         time = data[Columns.JST]
-        op =data[Columns.OPEN]
+        op = data[Columns.OPEN]
         hi = data[Columns.HIGH]
         lo = data[Columns.LOW]
         cl = data[Columns.CLOSE]
         n = len(time)
         entry = data[entry_signal]
         ext = data[exit_signal]
+        
+        if sl_short is not None:
+            sl_short = data[sl_short_signal]
         for i in range(1, n):
             t = time[i]
             if i == n - 1:
@@ -273,78 +241,23 @@ class Simulation:
             if ext[i] != 0:
                 self.positions.exit_all_signal(ext[i], i, time[i], cl[i])
             if entry[i] != 0:
-                #sl = self.calc_sl(i, entry[i], cl[i])
-                self.entry(entry[i], i, time[i], cl[i])
+                if entry[i] == Signal.LONG:
+                    sl = cl[i] - self.sl_value
+                    if sl_long_signal is not None:
+                        sl_long = data[sl_long_signal]
+                        if sl_long[i] > sl:
+                            sl = sl_long[i]
+                elif entry[i] == Signal.SHORT:
+                    sl = cl[i] + self.sl_value
+                    if sl_short_signal is not None:
+                        sl_short = data[sl_short_signal]
+                        if sl_short[i] < sl:
+                            sl = sl_short[i]
+                self.entry(entry[i], i, time[i], cl[i], sl)
         summary, profit_curve = self.positions.summary()
         return self.positions.to_dataFrame(self.strategy), summary, profit_curve
-        
-    
-    def run_doten(self, entry_column, exit_column):        
-        data = self.data
-        entry = data[entry_column]
-        ext = data[exit_column]
-        time = data[Columns.JST]
-        op = data[Columns.OPEN]
-        hi = data[Columns.HIGH]
-        lo = data[Columns.LOW]
-        cl = data[Columns.CLOSE]
-        n = len(time)
-        entry_filter = None
-        for i in range(n):
-            t = time[i]
-            self.positions.update(i, t, op[i], hi[i], lo[i], cl[i])
-            if ext[i] == 1:
-                self.positions.exit_all(i, t, cl[i])
-            if entry[i] != 0:
-                self.entry(entry[i], i, t, cl[i])
-        summary, profit_curve = self.positions.summary()
-        return self.positions.to_dataFrame(self.strategy), summary, profit_curve
-    
-    def run_trailing_stop(self, entry_column):        
-        data = self.data
-        entry = data[entry_column]
-        time = data[Columns.JST]
-        op = data[Columns.OPEN]
-        hi = data[Columns.HIGH]
-        lo = data[Columns.LOW]
-        cl = data[Columns.CLOSE]
-        n = len(time)
-        entry_filter = None
-        for i in range(n):
-            t = time[i]
-            self.positions.update(i, t, op[i], hi[i], lo[i], cl[i])
-            if entry[i] != 0:
-                self.entry(entry[i], i, t, cl[i])
-        summary, profit_curve = self.positions.summary()
-        return self.positions.to_dataFrame(self.strategy), summary, profit_curve
-    
-    def run_doten2(self, time, entry_signal, exit_signal, op, hi, lo, cl):
-        n = len(time)
-        state = None
-        for i in range(1, n):
-            if i == n - 1:
-                self.positions.exit_all(i, time[i], cl[i])
-                break
-            self.positions.update(i, time[i], op[i], hi[i], lo[i], cl[i])
-    
-            if state is None:
-                if entry_signal[i] == Signal.LONG or entry_signal[i] == Signal.SHORT:
-                    self.entry(entry_signal[i], i, time[i], cl[i])
-            elif state == Signal.LONG:
-                if exit_signal[i] == Signal.SHORT:
-                    self.doten(exit_signal[i], i, time[i], op[i], hi[i], lo[i], cl[i])
-            elif state == Signal.SHORT:
-                 if exit_signal[i] == Signal.LONG:
-                    self.doten(exit_signal[i], i, time[i], cl[i])
-        return self.positions.to_dataFrame()
-                    
-    def doten(self, signal, index, time, price):
-        self.positions.exit_all(index, time, price, doten=True)
-        self.entry(signal, index, time, price)
-        pass
-    
-    def entry(self, signal, index, time, price):
-        sl = self.calc_sl(index, signal, price)
+           
+    def entry(self, signal, index, time, price, sl):
         if self.timefilter is not None:
             if self.timefilter.on(time) == False:
                 return
