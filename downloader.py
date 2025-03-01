@@ -90,7 +90,7 @@ def save_data():
     year_from = 2020
     month_from = 1
     year_to = 2025
-    month_to = 2
+    month_to = 3
     loader = DataLoader()
     for symbol in all_symbols():
         if symbol in ['TSLA', 'NVDA', 'NIKKEI', 'NSDQ']:

@@ -229,9 +229,7 @@ class Simulation:
         n = len(time)
         entry = data[entry_signal]
         ext = data[exit_signal]
-        
-        if sl_short is not None:
-            sl_short = data[sl_short_signal]
+    
         for i in range(1, n):
             t = time[i]
             if i == n - 1:

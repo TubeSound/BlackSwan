@@ -87,6 +87,101 @@ def plot_marker(ax, data, signal, markers, colors, alpha=0.5, s=50):
             continue
         ax.scatter(time[i], cl[i], color=color, marker=marker, alpha=alpha, s=s)
         
+def make_trade_param(symbol, randomize=False):
+    begin_hour = 0
+    begin_minute = 0
+    hours = 0
+    if symbol == 'XAUUSD':
+        k = 0.1
+    if symbol == 'XAGUSD':
+        k = 0.001
+    elif symbol == 'XPDUSD':
+        k = 0.005
+    elif symbol == 'CL':
+        k = 0.002
+    elif symbol == 'NSDQ':
+        k = 0.5
+    elif symbol == 'USDJPY':
+        k = 0.001
+    elif symbol == 'TSLA':
+        k = 0.01
+        begin_hour = 21
+        begin_minute = 0
+        hours = 7
+    elif symbol == 'NVDA':
+        k = 0.003
+        begin_hour = 21
+        begin_minute = 0
+        hours = 7
+    elif symbol == 'DAX':
+        k = 0.5
+    elif symbol == 'HK50':
+        k = 0.5
+    else:
+        k = 1.0
+    
+    if randomize:
+        sl = random.randint(1, 10) * 20
+        trail_target = random.randint(1, 10) * 50
+        trail_stop = random.randint(1, 10) * 20
+    else:
+        sl = 250
+        trail_target = 300
+        trail_stop = 200
+    
+    param =  {
+                'strategy': 'supertrend',
+                'begin_hour': begin_hour,
+                'begin_minute': begin_minute,
+                'hours': hours,
+                'sl_method': Simulation.SL_FIX,
+                'sl_value': int(sl * k),
+                'trail_target': int(trail_target * k),
+                'trail_stop': int(trail_stop * k), 
+                'volume': 0.1, 
+                'position_max':2, 
+                'timelimit': 0}
+    return param, k        
+
+def trade(symbol, timeframe, data, trade_param):
+    sim = Simulation(data, trade_param)        
+    df, summary, profit_curve = sim.run(data,
+                                        Indicators.SQUEEZER_ENTRY,
+                                        Indicators.SQUEEZER_EXIT,
+                                        Indicators.SQUEEZER_UPPER_SL,
+                                        Indicators.SQUEEZER_LOWER_SL)
+    trade_num, profit, win_rate = summary
+    return (df, summary, profit_curve)
+
+
+def plot_profit(ax, df, t0, t1, rng):
+    df['texit'] = pd.to_datetime(df['exit_time'])
+    df['tentry'] = pd.to_datetime(df['entry_time'])
+    df2 = df[df['texit'] >= t0]
+    df2 = df2[df2['texit'] <= t1]
+    print('trade count: ', len(df2))
+    
+    signal = df2['signal'].to_list()
+    tentry = df2['tentry'].to_list()
+    price1 = df2['entry_price'].to_list()
+    texit = df2['texit'].to_list()
+    price2 = df2['exit_price'].to_list()
+    profits = df2['profit'].to_list()
+    for sig, ten, tex, p1, p2, prof in zip(signal, tentry, texit, price1, price2, profits):
+        if sig == 1:
+            color='green'
+        elif sig == -1:
+            color='red'
+        else:
+            continue
+        ax.vlines(tentry, rng[0], rng[1], color=color)
+        ax.vlines(texit, rng[0], rng[1], color='gray')
+        if prof > 0:
+            ax.text(texit, rng[1], f'{prof:.3f}', color='green')
+        else:
+            ax.text(texit, rng[0], f'{prof:.3f}', color='red')
+        
+        
 def evaluate(symbol, timeframe, days=10):
     dirpath = f'./debug/squeezer/{symbol}/{timeframe}'
     os.makedirs(dirpath, exist_ok=True)
@@ -94,11 +189,17 @@ def evaluate(symbol, timeframe, days=10):
     time = data0[Columns.JST]
     t0 = time[0]
     t1 = t0 + timedelta(days=days)
-
+    trade_param, k = make_trade_param(symbol)
     SQUEEZER(data0, 20, 2.0, 100)
+    (df, summary, profit_curve) = trade(symbol, timeframe, data0, trade_param)
     count = 0
     while t1 < time[-1]:
         n, data = TimeUtils.slice(data0, Columns.JST, t0, t1)   
+        if n < 10:
+            t0 = t1
+            t1 = t0 + timedelta(days=days)
+            continue
+        
         jst = data[Columns.JST]
         cl = data[Columns.CLOSE]
     
@@ -118,12 +219,17 @@ def evaluate(symbol, timeframe, days=10):
         axes[0].plot(jst, lower, color='orange', alpha=0.5) 
         plot_marker(axes[0], data, entry, ['^', 'v'], ['green', 'red'], s=100)
         plot_marker(axes[0], data, ext, ['x'], ['gray'], s=200, alpha=0.2)
+        plot_profit(axes[0], df, t0, t1, [min(cl), max(cl)])
         axes[1].plot(jst, std, color='blue', alpha=0.4, label='std')
         axes[1].plot(jst, atr, color='red', alpha=0.4, label='atr')
         axes[1].legend()
-        fig.savefig(os.path.join(dirpath, f'#{count}_imgge.png'))
-        plt.close()
-        count += 1
+        try:
+            fig.savefig(os.path.join(dirpath, f'#{count}_image.png'))
+            plt.close()
+            count += 1
+        except:
+            pass
+        
         t0 = t1
         t1 = t0 + timedelta(days=days)
 
