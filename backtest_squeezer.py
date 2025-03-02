@@ -174,12 +174,12 @@ def plot_profit(ax, df, t0, t1, rng):
             color='red'
         else:
             continue
-        ax.vlines(tentry, rng[0], rng[1], color=color)
-        ax.vlines(texit, rng[0], rng[1], color='gray')
+        ax.vlines(ten, rng[0], rng[1], color=color)
+        ax.vlines(tex, rng[0], rng[1], color='gray')
         if prof > 0:
-            ax.text(texit, rng[1], f'{prof:.3f}', color='green')
+            ax.text(tex, rng[1], f'{prof:.3f}', color='green')
         else:
-            ax.text(texit, rng[0], f'{prof:.3f}', color='red')
+            ax.text(tex, rng[0], f'{prof:.3f}', color='red')
         
         
 def evaluate(symbol, timeframe, days=10):
@@ -192,6 +192,12 @@ def evaluate(symbol, timeframe, days=10):
     trade_param, k = make_trade_param(symbol)
     SQUEEZER(data0, 20, 2.0, 100)
     (df, summary, profit_curve) = trade(symbol, timeframe, data0, trade_param)
+    print(summary)
+    df.to_csv(os.path.join(dirpath, 'trade_summary.csv'), index=False)
+    fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+    ax.plot(profit_curve[0], profit_curve[1])
+    fig.savefig(os.path.join(dirpath, 'profit.png'))
+    
     count = 0
     while t1 < time[-1]:
         n, data = TimeUtils.slice(data0, Columns.JST, t0, t1)   
@@ -239,7 +245,7 @@ if __name__ == '__main__':
     args = sys.argv
     if len(args) != 4:
         symbol = 'NSDQ'
-        timeframe = 'M5'
+        timeframe = 'M15'
         strategy = 'supertrend'
     else:        
         symbol = args[1]
