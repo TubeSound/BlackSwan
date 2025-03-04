@@ -197,5 +197,7 @@ class Backtest():
         ax.plot(profit_curve[0], profit_curve[1])
         fig.savefig(os.path.join(dirpath, 'profit.png'))
         
+        return df
+        
     
     

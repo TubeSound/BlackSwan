@@ -179,15 +179,16 @@ class Positions:
             return s
             
         data = []
+        count = 0
         for positions in [self.closed_positions, self.positions]:
             for position in positions:
-                d = [strategy, position.signal, position.entry_index, str(position.entry_time), position.entry_price]
-                d += [position.exit_index, str(position.exit_time), position.exit_price, position.profit]
+                d = [count, strategy, position.signal, position.entry_index, str(position.entry_time), position.entry_price]
+                d += [position.exit_index, str(position.exit_time), position.exit_price, position.sl, position.profit]
                 d += [bool2str(position.closed), bool2str(position.losscutted),  bool2str(position.trail_stopped)]
                 d += [bool2str(position.doten), bool2str(position.timelimit)]
                 data.append(d)
-        columns = ['Mode', 'signal', 'entry_index', 'entry_time', 'entry_price']
-        columns += ['exit_index', 'exit_time', 'exit_price', 'profit']
+        columns = ['no', 'Mode', 'signal', 'entry_index', 'entry_time', 'entry_price']
+        columns += ['exit_index', 'exit_time', 'exit_price', 'sl', 'profit']
         columns += ['closed', 'losscuted', 'trail_stopped', 'doten', 'timelimit']
         df = pd.DataFrame(data=data, columns=columns)
         return df 
